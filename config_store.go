@@ -124,5 +124,11 @@ func normalizeConfig(cfg AppConfig) AppConfig {
 		cfg.Headers = map[string]string{}
 	}
 
+	for key, value := range defaults.Mappings {
+		if _, ok := cfg.Mappings[key]; !ok {
+			cfg.Mappings[key] = value
+		}
+	}
+
 	return cfg
 }

@@ -15,7 +15,7 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:     "Codex DeepSeek Bridge",
+		Title:     "NetTopo Switch",
 		Width:     1280,
 		Height:    860,
 		MinWidth:  1080,

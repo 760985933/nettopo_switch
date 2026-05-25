@@ -171,9 +171,7 @@ async function restoreCodex() {
           <n-space vertical size="small">
             <div>
               <n-text style="font-weight: 600">Codex config.toml</n-text>
-              <n-text depth="3" style="display: block; margin-top: 6px; line-height: 1.6">
-                用于让 Codex 走本地桥接。新版 Codex 需要 wire_api = "responses"。
-              </n-text>
+            
             </div>
             <n-space>
               <n-button secondary @click="emit('codexCopy')">复制 TOML</n-button>

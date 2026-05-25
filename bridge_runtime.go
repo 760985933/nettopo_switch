@@ -268,6 +268,23 @@ func (b *BridgeRuntime) handleModels(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, id)
 	}
 
+	for _, id := range []string{
+		"gpt-5.5",
+		"gpt-5.4",
+		"gpt-5.4-mini",
+		"gpt-5.3-codex",
+		"gpt-4.1",
+		"gpt-4o",
+		"gpt-4o-mini",
+		"o4-mini",
+		"deepseek-v4-pro",
+		"deepseek-v4-flash",
+		"deepseek-chat",
+		"deepseek-reasoner",
+	} {
+		addModel(id)
+	}
+
 	addModel(cfg.DefaultModel)
 	for from, to := range cfg.Mappings {
 		addModel(from)
