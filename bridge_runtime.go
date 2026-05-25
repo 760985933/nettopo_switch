@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,7 +67,7 @@ func (b *BridgeRuntime) Start(cfg AppConfig) error {
 	mux.HandleFunc("/v1/responses", b.handleResponses)
 
 	b.server = &http.Server{
-		Handler:           mux,
+		Handler:           b.withAccessLog(mux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	b.listener = listener
@@ -95,6 +96,52 @@ func (b *BridgeRuntime) Start(cfg AppConfig) error {
 	}()
 
 	return nil
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+	size   int64
+}
+
+func (s *statusRecorder) WriteHeader(code int) {
+	s.status = code
+	s.ResponseWriter.WriteHeader(code)
+}
+
+func (s *statusRecorder) Write(p []byte) (int, error) {
+	if s.status == 0 {
+		s.status = http.StatusOK
+	}
+	n, err := s.ResponseWriter.Write(p)
+	s.size += int64(n)
+	return n, err
+}
+
+func (s *statusRecorder) Flush() {
+	if flusher, ok := s.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+func (b *BridgeRuntime) withAccessLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		startedAt := time.Now()
+		recorder := &statusRecorder{ResponseWriter: w}
+		next.ServeHTTP(recorder, r)
+
+		statusCode := recorder.status
+		if statusCode == 0 {
+			statusCode = http.StatusOK
+		}
+		duration := time.Since(startedAt).Milliseconds()
+		level := statusToLevel(statusCode)
+		ua := r.UserAgent()
+		if ua == "" {
+			ua = "-"
+		}
+		b.app.appendLog(level, "proxy", fmt.Sprintf("%s %s -> %d (%dms) ua=%s", r.Method, r.URL.Path, statusCode, duration, ua), "")
+	})
 }
 
 func (b *BridgeRuntime) Stop() error {
@@ -206,55 +253,73 @@ func (b *BridgeRuntime) handleRoot(w http.ResponseWriter, _ *http.Request) {
 
 func (b *BridgeRuntime) handleModels(w http.ResponseWriter, r *http.Request) {
 	cfg := b.snapshotConfig()
-	resourceURL, err := upstreamResourceURL(cfg.DeepseekBaseURL, "models")
-	if err != nil {
-		b.writeProxyError(w, http.StatusBadGateway, err.Error())
-		return
+	requestID := fmt.Sprintf("req_%d", time.Now().UnixNano())
+	w.Header().Set("x-bridge-request-id", requestID)
+
+	seen := map[string]bool{}
+	ids := make([]string, 0, 8+len(cfg.Mappings))
+
+	addModel := func(id string) {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			return
+		}
+		seen[id] = true
+		ids = append(ids, id)
 	}
 
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, resourceURL, nil)
-	if err != nil {
-		b.writeProxyError(w, http.StatusBadGateway, err.Error())
-		return
+	addModel(cfg.DefaultModel)
+	for from, to := range cfg.Mappings {
+		addModel(from)
+		addModel(to)
 	}
 
-	resp, err := b.doUpstream(req, cfg, false)
-	if err != nil {
-		b.writeProxyError(w, http.StatusBadGateway, err.Error())
-		return
+	sort.Strings(ids)
+	data := make([]any, 0, len(ids))
+	for _, id := range ids {
+		data = append(data, map[string]any{
+			"id":       id,
+			"object":   "model",
+			"owned_by": "nettopo-switch",
+		})
 	}
-	defer resp.Body.Close()
 
-	b.copyHeaders(w.Header(), resp.Header)
-	w.WriteHeader(resp.StatusCode)
-	_, _ = io.Copy(w, resp.Body)
+	b.writeJSON(w, http.StatusOK, map[string]any{
+		"object": "list",
+		"data":   data,
+	})
 }
 
 func (b *BridgeRuntime) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	cfg := b.snapshotConfig()
 	requestID := fmt.Sprintf("req_%d", time.Now().UnixNano())
 	startedAt := time.Now()
+	w.Header().Set("x-bridge-request-id", requestID)
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 4<<20))
 	if err != nil {
+		b.app.appendLog("error", "proxy", "chat/completions 读取请求体失败", requestID)
 		b.writeProxyError(w, http.StatusBadRequest, "读取请求体失败")
 		return
 	}
 
 	translatedBody, err := translateChatCompletions(body, cfg)
 	if err != nil {
+		b.app.appendLog("warn", "proxy", "chat/completions 请求体解析失败: "+err.Error()+" keys="+summarizeJSONKeys(body), requestID)
 		b.writeProxyError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	resourceURL, err := upstreamResourceURL(cfg.DeepseekBaseURL, "chat/completions")
 	if err != nil {
+		b.app.appendLog("error", "proxy", "chat/completions 上游地址错误: "+err.Error(), requestID)
 		b.writeProxyError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, resourceURL, bytes.NewReader(translatedBody))
 	if err != nil {
+		b.app.appendLog("error", "proxy", "chat/completions 构造上游请求失败: "+err.Error(), requestID)
 		b.writeProxyError(w, http.StatusBadGateway, err.Error())
 		return
 	}
@@ -297,59 +362,279 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 	cfg := b.snapshotConfig()
 	requestID := fmt.Sprintf("req_%d", time.Now().UnixNano())
 	startedAt := time.Now()
+	statusCode := 0
+	w.Header().Set("x-bridge-request-id", requestID)
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 4<<20))
 	if err != nil {
+		b.app.appendLog("error", "proxy", "responses 读取请求体失败", requestID)
 		b.writeProxyError(w, http.StatusBadRequest, "读取请求体失败")
 		return
 	}
 
 	chatBody, streaming, model, err := translateResponsesToChatCompletions(body, cfg)
 	if err != nil {
+		b.app.appendLog("warn", "proxy", "responses 请求体解析失败: "+err.Error()+" keys="+summarizeJSONKeys(body), requestID)
 		b.writeProxyError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if !streaming && strings.Contains(strings.ToLower(r.Header.Get("Accept")), "text/event-stream") {
+		streaming = true
+	}
+	if streaming && !bytes.Contains(chatBody, []byte(`"stream":true`)) {
+		var patched map[string]any
+		if err := json.Unmarshal(chatBody, &patched); err == nil {
+			patched["stream"] = true
+			if out, err := json.Marshal(patched); err == nil {
+				chatBody = out
+			}
+		}
 	}
 
 	resourceURL, err := upstreamResourceURL(cfg.DeepseekBaseURL, "chat/completions")
 	if err != nil {
+		b.app.appendLog("error", "proxy", "responses 上游地址错误: "+err.Error(), requestID)
 		b.writeProxyError(w, http.StatusBadGateway, err.Error())
 		return
 	}
-
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, resourceURL, bytes.NewReader(chatBody))
-	if err != nil {
-		b.writeProxyError(w, http.StatusBadGateway, err.Error())
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	copyRequestHeaders(req.Header, r.Header, cfg.Headers)
-	req.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(chatBody)), nil
-	}
-
-	resp, err := b.doUpstream(req, cfg, streaming)
-	if err != nil {
-		b.writeProxyError(w, http.StatusBadGateway, err.Error())
-		b.app.appendLog("error", "proxy", "转发失败: "+err.Error(), requestID)
-		return
-	}
-	defer resp.Body.Close()
-
-	atomic.AddInt64(&b.requestCount, 1)
 
 	if streaming {
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			b.writeProxyError(w, http.StatusBadGateway, "客户端不支持流式输出")
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
-		w.WriteHeader(resp.StatusCode)
+		w.WriteHeader(http.StatusOK)
+		flusher.Flush()
+
+		respID := fmt.Sprintf("resp_%d", time.Now().UnixNano())
+		itemID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
+		createdAt := time.Now().Unix()
+		seq := 1
+
+		responseSkeleton := map[string]any{
+			"id":         respID,
+			"object":     "response",
+			"created_at": createdAt,
+			"model":      model,
+			"status":     "in_progress",
+			"output":     []any{},
+		}
+
+		writeEvent := func(eventType string, data map[string]any) {
+			data["type"] = eventType
+			data["sequence_number"] = seq
+			seq++
+			payload, _ := json.Marshal(data)
+			_, _ = w.Write([]byte("event: " + eventType + "\n"))
+			_, _ = w.Write([]byte("data: " + string(payload) + "\n\n"))
+			flusher.Flush()
+		}
+
+		writeEvent("response.created", map[string]any{
+			"response": responseSkeleton,
+		})
+
+		writeEvent("response.output_item.added", map[string]any{
+			"output_index": 0,
+			"item": map[string]any{
+				"id":      itemID,
+				"type":    "message",
+				"role":    "assistant",
+				"status":  "in_progress",
+				"content": []any{},
+			},
+		})
+
+		writeEvent("response.content_part.added", map[string]any{
+			"item_id":       itemID,
+			"output_index":  0,
+			"content_index": 0,
+			"part": map[string]any{
+				"type": "output_text",
+				"text": "",
+			},
+		})
+
+		upstreamCtx := context.Background()
+		var cancel context.CancelFunc
+		if cfg.RequestTimeoutMs > 0 {
+			upstreamCtx, cancel = context.WithTimeout(upstreamCtx, time.Duration(cfg.RequestTimeoutMs)*time.Millisecond)
+		} else {
+			upstreamCtx, cancel = context.WithCancel(upstreamCtx)
+		}
+		defer cancel()
+
+		go func() {
+			select {
+			case <-r.Context().Done():
+				cancel()
+			case <-upstreamCtx.Done():
+			}
+		}()
+
+		req, err := http.NewRequestWithContext(upstreamCtx, http.MethodPost, resourceURL, bytes.NewReader(chatBody))
+		if err != nil {
+			writeEvent("response.failed", map[string]any{
+				"error": map[string]any{
+					"message": err.Error(),
+					"type":    "bad_gateway",
+				},
+			})
+			b.app.appendLog("error", "proxy", "responses 构造上游请求失败: "+err.Error(), requestID)
+			b.app.appendLog("error", "proxy", "转发失败: "+err.Error(), requestID)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		copyRequestHeaders(req.Header, r.Header, cfg.Headers)
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(chatBody)), nil
+		}
+
+		resp, err := b.doUpstream(req, cfg, true)
+		if err != nil {
+			writeEvent("response.failed", map[string]any{
+				"error": map[string]any{
+					"message": err.Error(),
+					"type":    "bad_gateway",
+				},
+			})
+			b.app.appendLog("error", "proxy", "转发失败: "+err.Error(), requestID)
+			return
+		}
+		defer resp.Body.Close()
+
+		atomic.AddInt64(&b.requestCount, 1)
 
 		if resp.StatusCode >= http.StatusBadRequest {
-			_, _ = io.Copy(w, resp.Body)
-		} else {
-			b.streamChatToResponses(w, resp.Body, model)
+			raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
+			msg := strings.TrimSpace(string(raw))
+			if msg == "" {
+				msg = fmt.Sprintf("上游返回 %d", resp.StatusCode)
+			} else {
+				msg = fmt.Sprintf("上游返回 %d: %s", resp.StatusCode, msg)
+			}
+			writeEvent("response.failed", map[string]any{
+				"error": map[string]any{
+					"message": msg,
+					"type":    "bad_gateway",
+				},
+			})
+			b.app.appendLog("error", "proxy", msg, requestID)
+			return
 		}
+
+		var buf strings.Builder
+		reader := bufio.NewScanner(resp.Body)
+		reader.Buffer(make([]byte, 0, 64*1024), 2*1024*1024)
+		for reader.Scan() {
+			line := strings.TrimSpace(reader.Text())
+			if line == "" {
+				continue
+			}
+			if !strings.HasPrefix(line, "data:") {
+				continue
+			}
+			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+			if data == "[DONE]" {
+				break
+			}
+
+			var chunk map[string]any
+			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+				continue
+			}
+
+			delta := extractChatDeltaText(chunk)
+			if delta == "" {
+				continue
+			}
+			buf.WriteString(delta)
+			writeEvent("response.output_text.delta", map[string]any{
+				"item_id":       itemID,
+				"output_index":  0,
+				"content_index": 0,
+				"delta":         delta,
+			})
+		}
+
+		finalText := buf.String()
+
+		writeEvent("response.output_text.done", map[string]any{
+			"item_id":       itemID,
+			"output_index":  0,
+			"content_index": 0,
+			"text":          finalText,
+		})
+
+		finalItem := map[string]any{
+			"id":     itemID,
+			"type":   "message",
+			"role":   "assistant",
+			"status": "completed",
+			"content": []any{
+				map[string]any{
+					"type": "output_text",
+					"text": finalText,
+				},
+			},
+		}
+
+		writeEvent("response.output_item.done", map[string]any{
+			"output_index": 0,
+			"item":         finalItem,
+		})
+
+		finalResponse := map[string]any{
+			"id":         respID,
+			"object":     "response",
+			"created_at": createdAt,
+			"model":      model,
+			"status":     "completed",
+			"output":     []any{finalItem},
+		}
+
+		writeEvent("response.completed", map[string]any{
+			"response": finalResponse,
+		})
+
+		duration := time.Since(startedAt).Milliseconds()
+		b.app.appendLog(
+			"info",
+			"proxy",
+			fmt.Sprintf("POST /v1/responses (stream) -> 200 (%dms)", duration),
+			requestID,
+		)
+		return
 	} else {
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, resourceURL, bytes.NewReader(chatBody))
+		if err != nil {
+			b.app.appendLog("error", "proxy", "responses 构造上游请求失败: "+err.Error(), requestID)
+			b.writeProxyError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		copyRequestHeaders(req.Header, r.Header, cfg.Headers)
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(chatBody)), nil
+		}
+
+		resp, err := b.doUpstream(req, cfg, false)
+		if err != nil {
+			b.writeProxyError(w, http.StatusBadGateway, err.Error())
+			b.app.appendLog("error", "proxy", "转发失败: "+err.Error(), requestID)
+			return
+		}
+		defer resp.Body.Close()
+
+		atomic.AddInt64(&b.requestCount, 1)
+
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
+		statusCode = resp.StatusCode
 		if resp.StatusCode >= http.StatusBadRequest {
 			b.copyHeaders(w.Header(), resp.Header)
 			w.WriteHeader(resp.StatusCode)
@@ -357,6 +642,7 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 		} else {
 			response, err := translateChatCompletionToResponses(raw, model)
 			if err != nil {
+				b.app.appendLog("error", "proxy", "responses 响应转换失败: "+err.Error(), requestID)
 				b.writeProxyError(w, http.StatusBadGateway, err.Error())
 			} else {
 				b.writeJSON(w, resp.StatusCode, response)
@@ -366,11 +652,31 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 
 	duration := time.Since(startedAt).Milliseconds()
 	b.app.appendLog(
-		statusToLevel(resp.StatusCode),
+		statusToLevel(statusCode),
 		"proxy",
-		fmt.Sprintf("POST /v1/responses -> %d (%dms)", resp.StatusCode, duration),
+		fmt.Sprintf("POST /v1/responses -> %d (%dms)", statusCode, duration),
 		requestID,
 	)
+}
+
+func summarizeJSONKeys(body []byte) string {
+	var payload any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return "invalid_json"
+	}
+	root, ok := payload.(map[string]any)
+	if !ok {
+		return "non_object"
+	}
+	keys := make([]string, 0, len(root))
+	for k := range root {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	if len(keys) > 24 {
+		keys = keys[:24]
+	}
+	return strings.Join(keys, ",")
 }
 
 func (b *BridgeRuntime) doUpstream(req *http.Request, cfg AppConfig, streaming bool) (*http.Response, error) {
@@ -384,6 +690,9 @@ func (b *BridgeRuntime) doUpstream(req *http.Request, cfg AppConfig, streaming b
 
 	client := &http.Client{
 		Timeout: time.Duration(cfg.RequestTimeoutMs) * time.Millisecond,
+	}
+	if streaming {
+		client.Timeout = 0
 	}
 
 	var lastErr error
@@ -651,8 +960,18 @@ func translateResponsesToChatCompletions(body []byte, cfg AppConfig) ([]byte, bo
 	}
 
 	streaming := false
-	if rawStream, ok := payload["stream"].(bool); ok {
-		streaming = rawStream
+	if raw, ok := payload["stream"]; ok {
+		switch typed := raw.(type) {
+		case bool:
+			streaming = typed
+		case string:
+			switch strings.ToLower(strings.TrimSpace(typed)) {
+			case "1", "true", "yes", "on":
+				streaming = true
+			}
+		case map[string]any:
+			streaming = true
+		}
 	}
 
 	model := strings.TrimSpace(cfg.DefaultModel)
@@ -708,7 +1027,11 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 
 	input, ok := payload["input"]
 	if !ok {
-		return messages, nil
+		if fallback, ok := payload["messages"]; ok {
+			input = fallback
+		} else {
+			return messages, nil
+		}
 	}
 
 	switch typed := input.(type) {
@@ -726,6 +1049,18 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 				continue
 			}
 
+			if t, ok := msg["type"].(string); ok && strings.TrimSpace(t) != "" {
+				switch strings.TrimSpace(t) {
+				case "message":
+					// fallthrough to role/content parsing below
+				case "input_text":
+					if text := strings.TrimSpace(flattenResponsesContent(msg)); text != "" {
+						messages = append(messages, map[string]any{"role": "user", "content": text})
+					}
+					continue
+				}
+			}
+
 			role, _ := msg["role"].(string)
 			role = strings.TrimSpace(role)
 			if role == "" {
@@ -733,6 +1068,9 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 			}
 
 			content := flattenResponsesContent(msg["content"])
+			if strings.TrimSpace(content) == "" {
+				content = flattenResponsesContent(msg)
+			}
 			if strings.TrimSpace(content) == "" {
 				continue
 			}
@@ -745,6 +1083,9 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 			role = "user"
 		}
 		content := flattenResponsesContent(typed["content"])
+		if strings.TrimSpace(content) == "" {
+			content = flattenResponsesContent(typed)
+		}
 		if strings.TrimSpace(content) != "" {
 			messages = append(messages, map[string]any{"role": role, "content": content})
 		}
