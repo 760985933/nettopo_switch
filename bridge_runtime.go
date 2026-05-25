@@ -1190,9 +1190,6 @@ func extractChatDeltaText(chunk map[string]any) string {
 	if content, ok := delta["content"].(string); ok {
 		return content
 	}
-	if content, ok := delta["reasoning_content"].(string); ok {
-		return content
-	}
 	return ""
 }
 
@@ -1265,11 +1262,6 @@ func extractChatCompletionText(payload map[string]any) string {
 	if msgAny, ok := first["message"].(map[string]any); ok {
 		if content, ok := msgAny["content"]; ok {
 			if text := flattenAnyText(content); strings.TrimSpace(text) != "" {
-				return text
-			}
-		}
-		if reasoning, ok := msgAny["reasoning_content"]; ok {
-			if text := flattenAnyText(reasoning); strings.TrimSpace(text) != "" {
 				return text
 			}
 		}
