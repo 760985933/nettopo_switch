@@ -7,7 +7,7 @@ export const SUPPORTED_LOCALES = [
   'ko-KR',
   'fr-FR',
   'de-DE',
-  'es-ES',
+  'es-AR',
 ] as const
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
@@ -24,7 +24,7 @@ export function normalizeLocale(value: string): SupportedLocale {
   if (lowered.startsWith('ko')) return 'ko-KR'
   if (lowered.startsWith('fr')) return 'fr-FR'
   if (lowered.startsWith('de')) return 'de-DE'
-  if (lowered.startsWith('es')) return 'es-ES'
+  if (lowered.startsWith('es')) return 'es-AR'
 
   return 'en-US'
 }
@@ -996,7 +996,7 @@ export const messages = {
     },
     common: { delete: 'Löschen' },
   },
-  'es-ES': {
+  'es-AR': {
     app: {
       nav: { overview: 'Panel', logs: 'Registros' },
       status: { running: 'En ejecución', starting: 'Iniciando', error: 'Error', stopped: 'Detenido' },
@@ -1157,4 +1157,3 @@ export const i18n = createI18n({
   fallbackLocale: 'en-US',
   messages,
 })
-

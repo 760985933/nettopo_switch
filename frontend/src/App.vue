@@ -37,7 +37,7 @@ const localeOptions = [
   { label: '한국어', value: 'ko-KR' },
   { label: 'Français', value: 'fr-FR' },
   { label: 'Deutsch', value: 'de-DE' },
-  { label: 'Español', value: 'es-ES' },
+  { label: 'Español', value: 'es-AR' },
 ] as const
 
 watch(
@@ -60,7 +60,7 @@ const naiveLocale = computed(() => {
       return frFR
     case 'de-DE':
       return deDE
-    case 'es-ES':
+    case 'es-AR':
       return esAR
     default:
       return enUS
@@ -79,7 +79,7 @@ const naiveDateLocale = computed(() => {
       return dateFrFR
     case 'de-DE':
       return dateDeDE
-    case 'es-ES':
+    case 'es-AR':
       return dateEsAR
     default:
       return dateEnUS
