@@ -20,6 +20,15 @@ const store = useAppStore()
 const ui = useUiStore()
 const { t, locale } = useI18n()
 const appVersion = 'v0.0.3'
+const localeOptions = [
+  { label: '简体中文', value: 'zh-CN' },
+  { label: 'English', value: 'en-US' },
+  { label: '日本語', value: 'ja-JP' },
+  { label: '한국어', value: 'ko-KR' },
+  { label: 'Français', value: 'fr-FR' },
+  { label: 'Deutsch', value: 'de-DE' },
+  { label: 'Español', value: 'es-ES' },
+] as const
 
 watch(
   () => ui.locale,
@@ -171,6 +180,13 @@ function handleClose() {
                 <span class="status-dot" />
                 {{ statusLabel }}
               </div>
+              <n-select
+                class="locale-select"
+                size="small"
+                :value="ui.locale"
+                :options="localeOptions"
+                @update:value="(value: string) => ui.setLocale(value)"
+              />
               <n-button secondary @click="ui.showSettings = true">{{ t('app.actions.preferences') }}</n-button>
             </div>
           </header>
@@ -309,6 +325,10 @@ function handleClose() {
   font-size: 12px;
 }
 
+.locale-select {
+  width: 132px;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;
@@ -366,6 +386,10 @@ function handleClose() {
   .window-actions {
     top: 10px;
     right: 10px;
+  }
+
+  .locale-select {
+    width: 118px;
   }
 }
 </style>

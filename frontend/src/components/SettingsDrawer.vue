@@ -26,16 +26,6 @@ const message = useMessage()
 const dialog = useDialog()
 const { t } = useI18n()
 
-const localeOptions = [
-  { label: '简体中文', value: 'zh-CN' },
-  { label: 'English', value: 'en-US' },
-  { label: '日本語', value: 'ja-JP' },
-  { label: '한국어', value: 'ko-KR' },
-  { label: 'Français', value: 'fr-FR' },
-  { label: 'Deutsch', value: 'de-DE' },
-  { label: 'Español', value: 'es-ES' },
-] as const
-
 const codexPath = ref('')
 const codexRaw = ref('')
 const codexBusy = ref(false)
@@ -237,11 +227,6 @@ async function clearAllBackups() {
       <div class="drawer-body">
         <n-card size="small" embedded>
           <n-space vertical size="large">
-            <n-form label-placement="top">
-              <n-form-item :label="t('settings.language')">
-                <n-select :value="ui.locale" :options="localeOptions" @update:value="(value: string) => ui.setLocale(value)" />
-              </n-form-item>
-            </n-form>
             <n-switch v-model:value="localConfig.enableAutoStart">
               <template #checked>{{ t('settings.switches.autoStart') }}</template>
               <template #unchecked>{{ t('settings.switches.autoStart') }}</template>
