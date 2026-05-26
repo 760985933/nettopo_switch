@@ -29,7 +29,7 @@ const route = useRoute()
 const store = useAppStore()
 const ui = useUiStore()
 const { t, locale } = useI18n()
-const appVersion = 'v0.0.3'
+const appVersion = 'v0.0.4'
 const localeOptions = [
   { label: '简体中文', value: 'zh-CN' },
   { label: 'English', value: 'en-US' },

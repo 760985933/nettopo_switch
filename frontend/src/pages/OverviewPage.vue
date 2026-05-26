@@ -60,8 +60,11 @@ async function handleSave(config: AppConfig) {
   }, t('overview.toast.configSaved'))
 }
 
-async function handleStart() {
-  await wrapAction(async () => store.startBridge(), t('overview.toast.bridgeStarted'), {
+async function handleStart(config: AppConfig) {
+  await wrapAction(async () => {
+    await store.saveConfig(config)
+    return store.startBridge()
+  }, t('overview.toast.bridgeStarted'), {
     timeoutMs: 5000,
     onTimeout: async () => {
       try {

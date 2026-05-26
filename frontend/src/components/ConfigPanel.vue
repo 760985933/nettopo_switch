@@ -13,7 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [value: AppConfig]
-  start: []
+  start: [value: AppConfig]
   stop: []
   restart: []
   copy: [value: string]
@@ -55,9 +55,6 @@ function submitSave() {
         <h3>{{ t('config.title') }}</h3>
         <p>{{ t('config.desc') }}</p>
       </div>
-      <n-space>
-        <n-button type="primary" :loading="loading" @click="submitSave">{{ t('config.actions.save') }}</n-button>
-      </n-space>
     </div>
 
     <n-form label-placement="top" :model="formValue">
@@ -94,7 +91,8 @@ function submitSave() {
 
     <div class="action-bar">
       <n-space>
-        <n-button type="primary" :disabled="isRunning" :loading="loading" @click="emit('start')">
+        <n-button secondary :loading="loading" @click="submitSave">{{ t('config.actions.save') }}</n-button>
+        <n-button type="primary" :disabled="isRunning" :loading="loading" @click="emit('start', formValue)">
           {{ t('config.actions.start') }}
         </n-button>
         <n-button secondary :disabled="!isRunning" :loading="loading" @click="emit('restart')">
