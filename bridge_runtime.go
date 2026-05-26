@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,6 +32,8 @@ type BridgeRuntime struct {
 	lastError     string
 	requestCount  int64
 	config        AppConfig
+	lastReasoning string
+	lastReasonAt  time.Time
 }
 
 func NewBridgeRuntime(app *App) *BridgeRuntime {
@@ -77,6 +80,8 @@ func (b *BridgeRuntime) Start(cfg AppConfig) error {
 	b.lastError = ""
 	b.requestCount = 0
 	b.config = cfg
+	b.lastReasoning = ""
+	b.lastReasonAt = time.Time{}
 	server := b.server
 	ln := b.listener
 	listenAddress := b.listenAddress
@@ -140,7 +145,12 @@ func (b *BridgeRuntime) withAccessLog(next http.Handler) http.Handler {
 		if ua == "" {
 			ua = "-"
 		}
-		b.app.appendLog(level, "proxy", fmt.Sprintf("%s %s -> %d (%dms) ua=%s", r.Method, r.URL.Path, statusCode, duration, ua), "")
+		requestID := recorder.Header().Get("x-bridge-request-id")
+		message := fmt.Sprintf("%s %s -> %d (%dms) bytes=%d ua=%s", r.Method, r.URL.Path, statusCode, duration, recorder.size, ua)
+		if strings.TrimSpace(requestID) != "" {
+			message += " rid=" + requestID
+		}
+		b.app.appendLog(level, "proxy", message, "")
 	})
 }
 
@@ -389,20 +399,28 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	reqSummary := summarizeResponsesRequest(body)
+	var upstreamRaw []byte
+
 	chatBody, streaming, model, err := translateResponsesToChatCompletions(body, cfg)
 	if err != nil {
 		b.app.appendLog("warn", "proxy", "responses 请求体解析失败: "+err.Error()+" keys="+summarizeJSONKeys(body), requestID)
 		b.writeProxyError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	reasoningInjected := false
+	if patched, ok := injectReasoningIntoChatPayload(chatBody, b.getLastReasoning()); ok {
+		chatBody = patched
+		reasoningInjected = true
+	}
 	if !streaming && strings.Contains(strings.ToLower(r.Header.Get("Accept")), "text/event-stream") {
 		streaming = true
 	}
 	if streaming && !bytes.Contains(chatBody, []byte(`"stream":true`)) {
 		var patched map[string]any
-		if err := json.Unmarshal(chatBody, &patched); err == nil {
+		if unmarshalErr := json.Unmarshal(chatBody, &patched); unmarshalErr == nil {
 			patched["stream"] = true
-			if out, err := json.Marshal(patched); err == nil {
+			if out, marshalErr := json.Marshal(patched); marshalErr == nil {
 				chatBody = out
 			}
 		}
@@ -428,80 +446,11 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
 
-		respID := fmt.Sprintf("resp_%d", time.Now().UnixNano())
-		itemID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
-		createdAt := time.Now().Unix()
-		seq := 1
-
-		responseSkeleton := map[string]any{
-			"id":         respID,
-			"object":     "response",
-			"created_at": createdAt,
-			"model":      model,
-			"status":     "in_progress",
-			"output":     []any{},
-		}
-
-		writeEvent := func(eventType string, data map[string]any) {
-			data["type"] = eventType
-			data["sequence_number"] = seq
-			seq++
-			payload, _ := json.Marshal(data)
-			_, _ = w.Write([]byte("event: " + eventType + "\n"))
-			_, _ = w.Write([]byte("data: " + string(payload) + "\n\n"))
-			flusher.Flush()
-		}
-
-		writeEvent("response.created", map[string]any{
-			"response": responseSkeleton,
-		})
-
-		writeEvent("response.output_item.added", map[string]any{
-			"output_index": 0,
-			"item": map[string]any{
-				"id":      itemID,
-				"type":    "message",
-				"role":    "assistant",
-				"status":  "in_progress",
-				"content": []any{},
-			},
-		})
-
-		writeEvent("response.content_part.added", map[string]any{
-			"item_id":       itemID,
-			"output_index":  0,
-			"content_index": 0,
-			"part": map[string]any{
-				"type": "output_text",
-				"text": "",
-			},
-		})
-
-		upstreamCtx := context.Background()
-		var cancel context.CancelFunc
-		if cfg.RequestTimeoutMs > 0 {
-			upstreamCtx, cancel = context.WithTimeout(upstreamCtx, time.Duration(cfg.RequestTimeoutMs)*time.Millisecond)
-		} else {
-			upstreamCtx, cancel = context.WithCancel(upstreamCtx)
-		}
-		defer cancel()
-
-		go func() {
-			select {
-			case <-r.Context().Done():
-				cancel()
-			case <-upstreamCtx.Done():
-			}
-		}()
+		upstreamCtx := r.Context()
 
 		req, err := http.NewRequestWithContext(upstreamCtx, http.MethodPost, resourceURL, bytes.NewReader(chatBody))
 		if err != nil {
-			writeEvent("response.failed", map[string]any{
-				"error": map[string]any{
-					"message": err.Error(),
-					"type":    "bad_gateway",
-				},
-			})
+			b.streamResponsesFailed(w, "bad_gateway", err.Error())
 			b.app.appendLog("error", "proxy", "responses 构造上游请求失败: "+err.Error(), requestID)
 			b.app.appendLog("error", "proxy", "转发失败: "+err.Error(), requestID)
 			return
@@ -514,12 +463,7 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 
 		resp, err := b.doUpstream(req, cfg, true)
 		if err != nil {
-			writeEvent("response.failed", map[string]any{
-				"error": map[string]any{
-					"message": err.Error(),
-					"type":    "bad_gateway",
-				},
-			})
+			b.streamResponsesFailed(w, "bad_gateway", err.Error())
 			b.app.appendLog("error", "proxy", "转发失败: "+err.Error(), requestID)
 			return
 		}
@@ -535,97 +479,39 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 			} else {
 				msg = fmt.Sprintf("上游返回 %d: %s", resp.StatusCode, msg)
 			}
-			writeEvent("response.failed", map[string]any{
-				"error": map[string]any{
-					"message": msg,
-					"type":    "bad_gateway",
-				},
-			})
-			b.app.appendLog("error", "proxy", msg, requestID)
+			b.streamResponsesFailed(w, "bad_gateway", msg)
+			message := fmt.Sprintf("POST /v1/responses (stream) -> %d (%dms)", resp.StatusCode, time.Since(startedAt).Milliseconds())
+			if reqSummary != "" {
+				message += " " + reqSummary
+			}
+			if reasoningInjected {
+				message += " reasoning_injected=true"
+			}
+			message += " upstream_error=" + truncateForLog(msg, 2048)
+			if debugPayloadEnabled() {
+				message += " req_json=" + truncateForLog(string(chatBody), 4096)
+			}
+			b.app.appendLog("error", "proxy", message, requestID)
 			return
 		}
 
-		var buf strings.Builder
-		reader := bufio.NewScanner(resp.Body)
-		reader.Buffer(make([]byte, 0, 64*1024), 2*1024*1024)
-		for reader.Scan() {
-			line := strings.TrimSpace(reader.Text())
-			if line == "" {
-				continue
-			}
-			if !strings.HasPrefix(line, "data:") {
-				continue
-			}
-			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-			if data == "[DONE]" {
-				break
-			}
-
-			var chunk map[string]any
-			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-				continue
-			}
-
-			delta := extractChatDeltaText(chunk)
-			if delta == "" {
-				continue
-			}
-			buf.WriteString(delta)
-			writeEvent("response.output_text.delta", map[string]any{
-				"item_id":       itemID,
-				"output_index":  0,
-				"content_index": 0,
-				"delta":         delta,
-			})
-		}
-
-		finalText := buf.String()
-
-		writeEvent("response.output_text.done", map[string]any{
-			"item_id":       itemID,
-			"output_index":  0,
-			"content_index": 0,
-			"text":          finalText,
-		})
-
-		finalItem := map[string]any{
-			"id":     itemID,
-			"type":   "message",
-			"role":   "assistant",
-			"status": "completed",
-			"content": []any{
-				map[string]any{
-					"type": "output_text",
-					"text": finalText,
-				},
-			},
-		}
-
-		writeEvent("response.output_item.done", map[string]any{
-			"output_index": 0,
-			"item":         finalItem,
-		})
-
-		finalResponse := map[string]any{
-			"id":         respID,
-			"object":     "response",
-			"created_at": createdAt,
-			"model":      model,
-			"status":     "completed",
-			"output":     []any{finalItem},
-		}
-
-		writeEvent("response.completed", map[string]any{
-			"response": finalResponse,
-		})
-
+		textLen, toolNames := b.streamChatToResponses(w, resp.Body, model)
 		duration := time.Since(startedAt).Milliseconds()
-		b.app.appendLog(
-			"info",
-			"proxy",
-			fmt.Sprintf("POST /v1/responses (stream) -> 200 (%dms)", duration),
-			requestID,
-		)
+		message := fmt.Sprintf("POST /v1/responses (stream) -> 200 (%dms)", duration)
+		if reqSummary != "" {
+			message += " " + reqSummary
+		}
+		if reasoningInjected {
+			message += " reasoning_injected=true"
+		}
+		message += fmt.Sprintf(" out_text_len=%d tool_calls=%d", textLen, len(toolNames))
+		if len(toolNames) > 0 {
+			message += " tool_names=" + strings.Join(toolNames, ",")
+		}
+		if debugPayloadEnabled() {
+			message += " req_json=" + truncateForLog(string(chatBody), 4096)
+		}
+		b.app.appendLog("info", "proxy", message, requestID)
 		return
 	} else {
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, resourceURL, bytes.NewReader(chatBody))
@@ -650,14 +536,17 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 
 		atomic.AddInt64(&b.requestCount, 1)
 
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
+		upstreamRaw, _ = io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 		statusCode = resp.StatusCode
 		if resp.StatusCode >= http.StatusBadRequest {
 			b.copyHeaders(w.Header(), resp.Header)
 			w.WriteHeader(resp.StatusCode)
-			_, _ = w.Write(raw)
+			_, _ = w.Write(upstreamRaw)
 		} else {
-			response, err := translateChatCompletionToResponses(raw, model)
+			if reasoning := strings.TrimSpace(extractChatCompletionReasoningFromBody(upstreamRaw)); reasoning != "" {
+				b.setLastReasoning(reasoning)
+			}
+			response, err := translateChatCompletionToResponses(upstreamRaw, model)
 			if err != nil {
 				b.app.appendLog("error", "proxy", "responses 响应转换失败: "+err.Error(), requestID)
 				b.writeProxyError(w, http.StatusBadGateway, err.Error())
@@ -668,12 +557,23 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 	}
 
 	duration := time.Since(startedAt).Milliseconds()
-	b.app.appendLog(
-		statusToLevel(statusCode),
-		"proxy",
-		fmt.Sprintf("POST /v1/responses -> %d (%dms)", statusCode, duration),
-		requestID,
-	)
+	message := fmt.Sprintf("POST /v1/responses -> %d (%dms)", statusCode, duration)
+	if reqSummary != "" {
+		message += " " + reqSummary
+	}
+	if reasoningInjected {
+		message += " reasoning_injected=true"
+	}
+	if statusCode >= http.StatusBadRequest && len(upstreamRaw) > 0 {
+		message += " upstream_error=" + truncateForLog(string(upstreamRaw), 2048)
+	}
+	if debugPayloadEnabled() {
+		message += " req_json=" + truncateForLog(string(chatBody), 4096)
+		if len(upstreamRaw) > 0 {
+			message += " resp_json=" + truncateForLog(string(upstreamRaw), 4096)
+		}
+	}
+	b.app.appendLog(statusToLevel(statusCode), "proxy", message, requestID)
 }
 
 func summarizeJSONKeys(body []byte) string {
@@ -694,6 +594,295 @@ func summarizeJSONKeys(body []byte) string {
 		keys = keys[:24]
 	}
 	return strings.Join(keys, ",")
+}
+
+func (b *BridgeRuntime) setLastReasoning(value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return
+	}
+	b.mu.Lock()
+	b.lastReasoning = value
+	b.lastReasonAt = time.Now()
+	b.mu.Unlock()
+}
+
+func (b *BridgeRuntime) getLastReasoning() string {
+	b.mu.RLock()
+	value := b.lastReasoning
+	at := b.lastReasonAt
+	b.mu.RUnlock()
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	if at.IsZero() {
+		return value
+	}
+	if time.Since(at) > 30*time.Minute {
+		return ""
+	}
+	return value
+}
+
+func injectReasoningIntoChatPayload(body []byte, reasoning string) ([]byte, bool) {
+	reasoning = strings.TrimSpace(reasoning)
+	if reasoning == "" {
+		return body, false
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return body, false
+	}
+	messages, ok := payload["messages"].([]any)
+	if !ok {
+		return body, false
+	}
+
+	hasReasoning := func(msg map[string]any) bool {
+		if rc, ok := msg["reasoning_content"].(string); ok && strings.TrimSpace(rc) != "" {
+			return true
+		}
+		if rc, ok := msg["reasoning"].(string); ok && strings.TrimSpace(rc) != "" {
+			return true
+		}
+		return false
+	}
+
+	// Prefer patching the last assistant message with tool_calls. DeepSeek thinking+tools requires
+	// reasoning_content to be passed back for the tool-call loop, and it must be associated with
+	// the assistant tool_calls message.
+	lastToolCallAssistant := -1
+	for i := len(messages) - 1; i >= 0; i-- {
+		msg, ok := messages[i].(map[string]any)
+		if !ok {
+			continue
+		}
+		role, _ := msg["role"].(string)
+		if !strings.EqualFold(strings.TrimSpace(role), "assistant") {
+			continue
+		}
+		if tc, ok := msg["tool_calls"].([]any); ok && len(tc) > 0 {
+			lastToolCallAssistant = i
+			break
+		}
+	}
+	if lastToolCallAssistant >= 0 {
+		if msg, ok := messages[lastToolCallAssistant].(map[string]any); ok && !hasReasoning(msg) {
+			msg["reasoning_content"] = reasoning
+			payload["messages"] = messages
+			if out, err := json.Marshal(payload); err == nil {
+				return out, true
+			}
+		}
+		return body, false
+	}
+
+	// Otherwise patch the last assistant message if present.
+	for i := len(messages) - 1; i >= 0; i-- {
+		msg, ok := messages[i].(map[string]any)
+		if !ok {
+			continue
+		}
+		role, _ := msg["role"].(string)
+		if !strings.EqualFold(strings.TrimSpace(role), "assistant") {
+			continue
+		}
+		if hasReasoning(msg) {
+			return body, false
+		}
+		msg["reasoning_content"] = reasoning
+		payload["messages"] = messages
+		if out, err := json.Marshal(payload); err == nil {
+			return out, true
+		}
+		return body, false
+	}
+
+	// Fallback: insert a synthetic assistant message before the first tool message.
+	injected := map[string]any{
+		"role":              "assistant",
+		"content":           "",
+		"reasoning_content": reasoning,
+	}
+
+	insertAt := len(messages)
+	for i, item := range messages {
+		msg, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		role, _ := msg["role"].(string)
+		if strings.EqualFold(strings.TrimSpace(role), "tool") {
+			insertAt = i
+			break
+		}
+	}
+
+	next := make([]any, 0, len(messages)+1)
+	next = append(next, messages[:insertAt]...)
+	next = append(next, injected)
+	next = append(next, messages[insertAt:]...)
+	payload["messages"] = next
+
+	out, err := json.Marshal(payload)
+	if err != nil {
+		return body, false
+	}
+	return out, true
+}
+
+func (b *BridgeRuntime) streamResponsesFailed(w http.ResponseWriter, errType string, message string) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return
+	}
+
+	payload, _ := json.Marshal(map[string]any{
+		"type":            "response.failed",
+		"sequence_number": 1,
+		"error": map[string]any{
+			"message": message,
+			"type":    errType,
+		},
+	})
+	_, _ = w.Write([]byte("event: response.failed\n"))
+	_, _ = w.Write([]byte("data: " + string(payload) + "\n\n"))
+	flusher.Flush()
+}
+
+func debugPayloadEnabled() bool {
+	v := strings.TrimSpace(os.Getenv("CODEX_BRIDGE_DEBUG_PAYLOAD"))
+	if v == "" {
+		return false
+	}
+	v = strings.ToLower(v)
+	return v != "0" && v != "false" && v != "off" && v != "no"
+}
+
+func truncateForLog(value string, max int) string {
+	if max <= 0 {
+		return ""
+	}
+	value = strings.ReplaceAll(value, "\n", " ")
+	value = strings.ReplaceAll(value, "\r", " ")
+	if len(value) <= max {
+		return value
+	}
+	return value[:max] + "...(truncated)"
+}
+
+func summarizeResponsesRequest(body []byte) string {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return ""
+	}
+
+	model, _ := payload["model"].(string)
+	stream := false
+	if raw, ok := payload["stream"]; ok {
+		switch typed := raw.(type) {
+		case bool:
+			stream = typed
+		case string:
+			switch strings.ToLower(strings.TrimSpace(typed)) {
+			case "1", "true", "yes", "on":
+				stream = true
+			}
+		case map[string]any:
+			stream = true
+		}
+	}
+
+	toolsSummary := summarizeTools(payload["tools"])
+	inputSummary := summarizeResponsesInput(payload["input"])
+
+	parts := make([]string, 0, 4)
+	if strings.TrimSpace(model) != "" {
+		parts = append(parts, "model="+model)
+	}
+	parts = append(parts, "stream="+strconv.FormatBool(stream))
+	if toolsSummary != "" {
+		parts = append(parts, "tools="+toolsSummary)
+	}
+	if inputSummary != "" {
+		parts = append(parts, "input="+inputSummary)
+	}
+	return strings.Join(parts, " ")
+}
+
+func summarizeResponsesInput(value any) string {
+	items, ok := value.([]any)
+	if !ok || len(items) == 0 {
+		return ""
+	}
+	counts := map[string]int{}
+	for _, item := range items {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		t, _ := m["type"].(string)
+		if strings.TrimSpace(t) == "" {
+			continue
+		}
+		counts[t]++
+	}
+	keys := make([]string, 0, len(counts))
+	for k := range counts {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s:%d", k, counts[k]))
+	}
+	return strings.Join(parts, ",")
+}
+
+func summarizeTools(value any) string {
+	toolsAny, ok := value.([]any)
+	if !ok || len(toolsAny) == 0 {
+		return ""
+	}
+	names := make([]string, 0, len(toolsAny))
+	for _, toolAny := range toolsAny {
+		tool, ok := toolAny.(map[string]any)
+		if !ok {
+			continue
+		}
+		t, _ := tool["type"].(string)
+		if t == "namespace" {
+			if nested, ok := tool["tools"].([]any); ok {
+				if nestedSummary := summarizeTools(nested); nestedSummary != "" {
+					names = append(names, nestedSummary)
+				}
+			}
+			continue
+		}
+		if t == "custom" {
+			t = "function"
+		}
+		if t != "function" {
+			continue
+		}
+		if fn, ok := tool["function"].(map[string]any); ok {
+			if name, ok := fn["name"].(string); ok && strings.TrimSpace(name) != "" {
+				names = append(names, name)
+			}
+			continue
+		}
+		if name, ok := tool["name"].(string); ok && strings.TrimSpace(name) != "" {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return fmt.Sprintf("n=%d", len(toolsAny))
+	}
+	if len(names) > 12 {
+		names = append(names[:12], "...")
+	}
+	return fmt.Sprintf("n=%d(%s)", len(toolsAny), strings.Join(names, ","))
 }
 
 func (b *BridgeRuntime) doUpstream(req *http.Request, cfg AppConfig, streaming bool) (*http.Response, error) {
@@ -764,11 +953,11 @@ func (b *BridgeRuntime) streamResponse(w http.ResponseWriter, body io.Reader) {
 	}
 }
 
-func (b *BridgeRuntime) streamChatToResponses(w http.ResponseWriter, body io.Reader, model string) {
+func (b *BridgeRuntime) streamChatToResponses(w http.ResponseWriter, body io.Reader, model string) (int, []string) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		_, _ = io.Copy(w, body)
-		return
+		return 0, nil
 	}
 
 	respID := fmt.Sprintf("resp_%d", time.Now().UnixNano())
@@ -820,7 +1009,17 @@ func (b *BridgeRuntime) streamChatToResponses(w http.ResponseWriter, body io.Rea
 		},
 	})
 
+	type toolState struct {
+		id        string
+		name      string
+		arguments strings.Builder
+		added     bool
+	}
+
+	toolStates := map[int]*toolState{}
+
 	var buf strings.Builder
+	var reasoningBuf strings.Builder
 	reader := bufio.NewScanner(body)
 	reader.Buffer(make([]byte, 0, 64*1024), 2*1024*1024)
 	for reader.Scan() {
@@ -841,20 +1040,91 @@ func (b *BridgeRuntime) streamChatToResponses(w http.ResponseWriter, body io.Rea
 			continue
 		}
 
-		delta := extractChatDeltaText(chunk)
-		if delta == "" {
-			continue
+		if choicesAny, ok := chunk["choices"].([]any); ok && len(choicesAny) > 0 {
+			if first, ok := choicesAny[0].(map[string]any); ok {
+				if deltaAny, ok := first["delta"].(map[string]any); ok {
+					if rc, ok := deltaAny["reasoning_content"].(string); ok && strings.TrimSpace(rc) != "" {
+						reasoningBuf.WriteString(rc)
+					} else if rc, ok := deltaAny["reasoning"].(string); ok && strings.TrimSpace(rc) != "" {
+						reasoningBuf.WriteString(rc)
+					}
+					if rawToolCalls, ok := deltaAny["tool_calls"].([]any); ok && len(rawToolCalls) > 0 {
+						for fallbackIndex, raw := range rawToolCalls {
+							call, ok := raw.(map[string]any)
+							if !ok {
+								continue
+							}
+							index := fallbackIndex
+							if v, ok := call["index"].(float64); ok {
+								index = int(v)
+							}
+
+							id, _ := call["id"].(string)
+							fn, _ := call["function"].(map[string]any)
+							name, _ := fn["name"].(string)
+							argsDelta, _ := fn["arguments"].(string)
+							if strings.TrimSpace(id) == "" {
+								id = fmt.Sprintf("call_%d", time.Now().UnixNano())
+							}
+
+							state := toolStates[index]
+							if state == nil {
+								state = &toolState{id: id}
+								toolStates[index] = state
+							}
+							if strings.TrimSpace(state.id) == "" {
+								state.id = id
+							}
+							if strings.TrimSpace(name) != "" {
+								state.name = name
+							}
+
+							if !state.added {
+								state.added = true
+								writeEvent("response.output_item.added", map[string]any{
+									"output_index": 1 + index,
+									"item": map[string]any{
+										"id":        state.id,
+										"type":      "function_call",
+										"call_id":   state.id,
+										"name":      state.name,
+										"arguments": "",
+										"status":    "in_progress",
+									},
+								})
+							}
+
+							if strings.TrimSpace(argsDelta) != "" {
+								state.arguments.WriteString(argsDelta)
+								writeEvent("response.function_call_arguments.delta", map[string]any{
+									"item_id":      state.id,
+									"output_index": 1 + index,
+									"delta":        argsDelta,
+								})
+							}
+						}
+					}
+				}
+			}
 		}
-		buf.WriteString(delta)
-		writeEvent("response.output_text.delta", map[string]any{
-			"item_id":       itemID,
-			"output_index":  0,
-			"content_index": 0,
-			"delta":         delta,
-		})
+
+		deltaText := extractChatDeltaText(chunk)
+		if deltaText != "" {
+			buf.WriteString(deltaText)
+			writeEvent("response.output_text.delta", map[string]any{
+				"item_id":       itemID,
+				"output_index":  0,
+				"content_index": 0,
+				"delta":         deltaText,
+			})
+		}
 	}
 
 	finalText := buf.String()
+	finalReasoning := reasoningBuf.String()
+	if strings.TrimSpace(finalReasoning) != "" {
+		b.setLastReasoning(finalReasoning)
+	}
 
 	writeEvent("response.output_text.done", map[string]any{
 		"item_id":       itemID,
@@ -875,11 +1145,61 @@ func (b *BridgeRuntime) streamChatToResponses(w http.ResponseWriter, body io.Rea
 			},
 		},
 	}
+	if strings.TrimSpace(finalReasoning) != "" {
+		finalItem["reasoning_content"] = finalReasoning
+	}
 
 	writeEvent("response.output_item.done", map[string]any{
 		"output_index": 0,
 		"item":         finalItem,
 	})
+
+	toolIndices := make([]int, 0, len(toolStates))
+	for idx := range toolStates {
+		toolIndices = append(toolIndices, idx)
+	}
+	sort.Ints(toolIndices)
+
+	finalOutput := make([]any, 0, 1+len(toolIndices))
+	finalOutput = append(finalOutput, finalItem)
+	requiredToolCalls := make([]any, 0, len(toolIndices))
+
+	for _, idx := range toolIndices {
+		state := toolStates[idx]
+		if state == nil {
+			continue
+		}
+		args := state.arguments.String()
+		writeEvent("response.function_call_arguments.done", map[string]any{
+			"item_id":      state.id,
+			"output_index": 1 + idx,
+			"arguments":    args,
+		})
+
+		callItem := map[string]any{
+			"id":        state.id,
+			"type":      "function_call",
+			"call_id":   state.id,
+			"name":      state.name,
+			"arguments": args,
+			"status":    "completed",
+		}
+
+		writeEvent("response.output_item.done", map[string]any{
+			"output_index": 1 + idx,
+			"item":         callItem,
+		})
+
+		finalOutput = append(finalOutput, callItem)
+		requiredToolCalls = append(requiredToolCalls, map[string]any{
+			"id":   state.id,
+			"type": "function",
+			"function": map[string]any{
+				"name":      state.name,
+				"arguments": args,
+			},
+		})
+	}
 
 	finalResponse := map[string]any{
 		"id":         respID,
@@ -887,12 +1207,37 @@ func (b *BridgeRuntime) streamChatToResponses(w http.ResponseWriter, body io.Rea
 		"created_at": createdAt,
 		"model":      model,
 		"status":     "completed",
-		"output":     []any{finalItem},
+		"output":     finalOutput,
+	}
+	if len(requiredToolCalls) > 0 {
+		finalResponse["status"] = "requires_action"
+		finalResponse["required_action"] = map[string]any{
+			"type": "submit_tool_outputs",
+			"submit_tool_outputs": map[string]any{
+				"tool_calls": requiredToolCalls,
+			},
+		}
 	}
 
 	writeEvent("response.completed", map[string]any{
 		"response": finalResponse,
 	})
+
+	toolNames := make([]string, 0, len(toolIndices))
+	for _, idx := range toolIndices {
+		state := toolStates[idx]
+		if state == nil {
+			continue
+		}
+		if strings.TrimSpace(state.name) != "" {
+			toolNames = append(toolNames, state.name)
+		}
+	}
+	if len(toolNames) > 12 {
+		toolNames = append(toolNames[:12], "...")
+	}
+
+	return len(finalText), toolNames
 }
 
 func (b *BridgeRuntime) setStatus(status BridgeStatus, lastError string) {
@@ -903,6 +1248,8 @@ func (b *BridgeRuntime) setStatus(status BridgeStatus, lastError string) {
 		b.listenAddress = ""
 		b.startedAt = time.Time{}
 		atomic.StoreInt64(&b.requestCount, 0)
+		b.lastReasoning = ""
+		b.lastReasonAt = time.Time{}
 	}
 	b.mu.Unlock()
 
@@ -974,6 +1321,18 @@ func translateChatCompletions(body []byte, cfg AppConfig) ([]byte, error) {
 			}
 		}
 		payload["messages"] = messagesAny
+	}
+
+	if v, ok := payload["tools"]; ok {
+		payload["tools"] = normalizeToolsForChatCompletions(v)
+	}
+	if v, ok := payload["tool_choice"]; ok {
+		payload["tool_choice"] = normalizeToolChoiceForChatCompletions(v)
+	}
+	if _, ok := payload["thinking"]; !ok {
+		if thinking := autoThinkingParam(payload["tools"]); thinking != nil {
+			payload["thinking"] = thinking
+		}
 	}
 
 	translatedBody, err := json.Marshal(payload)
@@ -1052,12 +1411,141 @@ func translateResponsesToChatCompletions(body []byte, cfg AppConfig) ([]byte, bo
 	if v, ok := payload["max_tokens"]; ok {
 		chatPayload["max_tokens"] = v
 	}
+	if v, ok := payload["tools"]; ok {
+		chatPayload["tools"] = normalizeToolsForChatCompletions(v)
+	}
+	if v, ok := payload["tool_choice"]; ok {
+		chatPayload["tool_choice"] = normalizeToolChoiceForChatCompletions(v)
+	}
+	if v, ok := payload["parallel_tool_calls"]; ok {
+		chatPayload["parallel_tool_calls"] = v
+	}
+	if v, ok := payload["thinking"]; ok {
+		chatPayload["thinking"] = v
+	} else if thinking := autoThinkingParam(chatPayload["tools"]); thinking != nil {
+		chatPayload["thinking"] = thinking
+	}
 
 	out, err := json.Marshal(chatPayload)
 	if err != nil {
 		return nil, false, "", err
 	}
 	return out, streaming, model, nil
+}
+
+func normalizeToolsForChatCompletions(value any) any {
+	tools, ok := value.([]any)
+	if !ok {
+		return value
+	}
+
+	out := make([]any, 0, len(tools))
+	for _, item := range tools {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		t, _ := m["type"].(string)
+		if strings.TrimSpace(t) == "" {
+			continue
+		}
+
+		if t == "custom" {
+			t = "function"
+		}
+
+		if t == "namespace" {
+			if nested, ok := m["tools"].([]any); ok && len(nested) > 0 {
+				if normalized, ok := normalizeToolsForChatCompletions(nested).([]any); ok {
+					out = append(out, normalized...)
+				}
+			}
+			continue
+		}
+
+		if t != "function" {
+			continue
+		}
+
+		if _, ok := m["function"].(map[string]any); ok {
+			out = append(out, item)
+			continue
+		}
+
+		name, _ := m["name"].(string)
+		desc, _ := m["description"].(string)
+		params := m["parameters"]
+
+		fn := map[string]any{
+			"name": name,
+		}
+		if strings.TrimSpace(desc) != "" {
+			fn["description"] = desc
+		}
+		if params != nil {
+			fn["parameters"] = params
+		}
+
+		normalized := map[string]any{
+			"type":     "function",
+			"function": fn,
+		}
+		if v, ok := m["strict"]; ok {
+			normalized["strict"] = v
+		}
+		out = append(out, normalized)
+	}
+	return out
+}
+
+func normalizeToolChoiceForChatCompletions(value any) any {
+	if s, ok := value.(string); ok {
+		return s
+	}
+	m, ok := value.(map[string]any)
+	if !ok {
+		return value
+	}
+	t, _ := m["type"].(string)
+	if t == "namespace" {
+		return "auto"
+	}
+	if t == "custom" {
+		t = "function"
+	}
+	if t != "function" {
+		return value
+	}
+	if _, ok := m["function"].(map[string]any); ok {
+		return value
+	}
+	name, _ := m["name"].(string)
+	if strings.TrimSpace(name) == "" {
+		return value
+	}
+	return map[string]any{
+		"type": "function",
+		"function": map[string]any{
+			"name": name,
+		},
+	}
+}
+
+func autoThinkingParam(tools any) any {
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv("CODEX_BRIDGE_THINKING")))
+	switch mode {
+	case "1", "true", "on", "enabled":
+		return map[string]any{"type": "enabled"}
+	case "0", "false", "off", "disabled":
+		return map[string]any{"type": "disabled"}
+	}
+
+	toolsAny, ok := tools.([]any)
+	if ok && len(toolsAny) > 0 {
+		return map[string]any{"type": "disabled"}
+	}
+	return nil
 }
 
 func responsesInputToMessages(payload map[string]any) ([]any, error) {
@@ -1103,6 +1591,60 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 						messages = append(messages, map[string]any{"role": "user", "content": text})
 					}
 					continue
+				case "function_call_output":
+					callID, _ := msg["call_id"].(string)
+					if callID == "" {
+						callID, _ = msg["tool_call_id"].(string)
+					}
+					if callID == "" {
+						callID, _ = msg["id"].(string)
+					}
+					output := strings.TrimSpace(flattenAnyText(msg["output"]))
+					if output == "" {
+						output = strings.TrimSpace(flattenResponsesContent(msg["content"]))
+					}
+					if output == "" {
+						output = strings.TrimSpace(flattenResponsesContent(msg))
+					}
+					messages = append(messages, map[string]any{
+						"role":         "tool",
+						"tool_call_id": callID,
+						"content":      output,
+					})
+					continue
+				case "function_call":
+					callID, _ := msg["call_id"].(string)
+					if callID == "" {
+						callID, _ = msg["id"].(string)
+					}
+					name, _ := msg["name"].(string)
+					arguments := ""
+					switch v := msg["arguments"].(type) {
+					case string:
+						arguments = v
+					case map[string]any, []any:
+						if out, err := json.Marshal(v); err == nil {
+							arguments = string(out)
+						}
+					}
+					if callID == "" && name == "" && strings.TrimSpace(arguments) == "" {
+						continue
+					}
+					messages = append(messages, map[string]any{
+						"role":    "assistant",
+						"content": "",
+						"tool_calls": []any{
+							map[string]any{
+								"id":   callID,
+								"type": "function",
+								"function": map[string]any{
+									"name":      name,
+									"arguments": arguments,
+								},
+							},
+						},
+					})
+					continue
 				}
 			}
 
@@ -1113,10 +1655,18 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 			if strings.TrimSpace(content) == "" {
 				content = flattenResponsesContent(msg)
 			}
-			if strings.TrimSpace(content) == "" {
+			reasoning := ""
+			if role == "assistant" {
+				reasoning = strings.TrimSpace(extractResponsesReasoningContent(msg))
+			}
+			if strings.TrimSpace(content) == "" && reasoning == "" {
 				continue
 			}
-			messages = append(messages, map[string]any{"role": role, "content": content})
+			chatMsg := map[string]any{"role": role, "content": content}
+			if role == "assistant" && reasoning != "" {
+				chatMsg["reasoning_content"] = reasoning
+			}
+			messages = append(messages, chatMsg)
 		}
 	case map[string]any:
 		role, _ := typed["role"].(string)
@@ -1125,14 +1675,60 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 		if strings.TrimSpace(content) == "" {
 			content = flattenResponsesContent(typed)
 		}
-		if strings.TrimSpace(content) != "" {
-			messages = append(messages, map[string]any{"role": role, "content": content})
+		reasoning := ""
+		if role == "assistant" {
+			reasoning = strings.TrimSpace(extractResponsesReasoningContent(typed))
+		}
+		if strings.TrimSpace(content) != "" || reasoning != "" {
+			chatMsg := map[string]any{"role": role, "content": content}
+			if role == "assistant" && reasoning != "" {
+				chatMsg["reasoning_content"] = reasoning
+			}
+			messages = append(messages, chatMsg)
 		}
 	default:
 		return nil, errors.New("Responses input 格式不支持")
 	}
 
 	return messages, nil
+}
+
+func extractResponsesReasoningContent(msg map[string]any) string {
+	if v, ok := msg["reasoning_content"].(string); ok && strings.TrimSpace(v) != "" {
+		return v
+	}
+	if v, ok := msg["reasoning"].(string); ok && strings.TrimSpace(v) != "" {
+		return v
+	}
+
+	contentAny, ok := msg["content"].([]any)
+	if !ok || len(contentAny) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for _, partAny := range contentAny {
+		part, ok := partAny.(map[string]any)
+		if !ok {
+			continue
+		}
+		t, _ := part["type"].(string)
+		t = strings.ToLower(strings.TrimSpace(t))
+		if t == "" {
+			continue
+		}
+		if strings.Contains(t, "reason") || strings.Contains(t, "think") {
+			if text := strings.TrimSpace(flattenAnyText(part["text"])); text != "" {
+				parts = append(parts, text)
+				continue
+			}
+			if text := strings.TrimSpace(flattenAnyText(part["reasoning_content"])); text != "" {
+				parts = append(parts, text)
+				continue
+			}
+		}
+	}
+	return strings.Join(parts, "")
 }
 
 func flattenResponsesContent(value any) string {
@@ -1210,6 +1806,90 @@ func extractChatDeltaText(chunk map[string]any) string {
 	return ""
 }
 
+type chatToolCall struct {
+	ID        string
+	Name      string
+	Arguments string
+}
+
+func extractChatDeltaToolCalls(chunk map[string]any) []chatToolCall {
+	choicesAny, ok := chunk["choices"]
+	if !ok {
+		return nil
+	}
+	choices, ok := choicesAny.([]any)
+	if !ok || len(choices) == 0 {
+		return nil
+	}
+	first, ok := choices[0].(map[string]any)
+	if !ok {
+		return nil
+	}
+	deltaAny, ok := first["delta"]
+	if !ok {
+		return nil
+	}
+	delta, ok := deltaAny.(map[string]any)
+	if !ok {
+		return nil
+	}
+	raw, ok := delta["tool_calls"].([]any)
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+
+	out := make([]chatToolCall, 0, len(raw))
+	for _, item := range raw {
+		tc, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		id, _ := tc["id"].(string)
+		fn, _ := tc["function"].(map[string]any)
+		name, _ := fn["name"].(string)
+		args, _ := fn["arguments"].(string)
+		out = append(out, chatToolCall{ID: id, Name: name, Arguments: args})
+	}
+	return out
+}
+
+func extractChatCompletionToolCalls(payload map[string]any) []chatToolCall {
+	choicesAny, ok := payload["choices"]
+	if !ok {
+		return nil
+	}
+	choices, ok := choicesAny.([]any)
+	if !ok || len(choices) == 0 {
+		return nil
+	}
+	first, ok := choices[0].(map[string]any)
+	if !ok {
+		return nil
+	}
+	msgAny, ok := first["message"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	raw, ok := msgAny["tool_calls"].([]any)
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+
+	out := make([]chatToolCall, 0, len(raw))
+	for _, item := range raw {
+		tc, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		id, _ := tc["id"].(string)
+		fn, _ := tc["function"].(map[string]any)
+		name, _ := fn["name"].(string)
+		args, _ := fn["arguments"].(string)
+		out = append(out, chatToolCall{ID: id, Name: name, Arguments: args})
+	}
+	return out
+}
+
 func translateChatCompletionToResponses(body []byte, model string) (map[string]any, error) {
 	var payload map[string]any
 	if err := json.Unmarshal(body, &payload); err != nil {
@@ -1217,6 +1897,8 @@ func translateChatCompletionToResponses(body []byte, model string) (map[string]a
 	}
 
 	text := extractChatCompletionText(payload)
+	toolCalls := extractChatCompletionToolCalls(payload)
+	reasoning := extractChatCompletionReasoning(payload)
 
 	usage := map[string]any{}
 	if usageAny, ok := payload["usage"].(map[string]any); ok {
@@ -1232,20 +1914,62 @@ func translateChatCompletionToResponses(body []byte, model string) (map[string]a
 	}
 
 	respID := fmt.Sprintf("resp_%d", time.Now().UnixNano())
-	itemID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
 	createdAt := time.Now().Unix()
 
-	item := map[string]any{
-		"id":     itemID,
-		"type":   "message",
-		"role":   "assistant",
-		"status": "completed",
-		"content": []any{
-			map[string]any{
-				"type": "output_text",
-				"text": text,
+	output := make([]any, 0, 1+len(toolCalls))
+	if strings.TrimSpace(reasoning) != "" {
+		itemID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
+		output = append(output, map[string]any{
+			"id":                itemID,
+			"type":              "message",
+			"role":              "assistant",
+			"status":            "completed",
+			"content":           []any{},
+			"reasoning_content": reasoning,
+		})
+	}
+
+	if strings.TrimSpace(text) != "" {
+		itemID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
+		item := map[string]any{
+			"id":     itemID,
+			"type":   "message",
+			"role":   "assistant",
+			"status": "completed",
+			"content": []any{
+				map[string]any{
+					"type": "output_text",
+					"text": text,
+				},
 			},
-		},
+		}
+		if strings.TrimSpace(reasoning) != "" {
+			item["reasoning_content"] = reasoning
+		}
+		output = append(output, item)
+	}
+
+	requiredToolCalls := make([]any, 0, len(toolCalls))
+	for _, tc := range toolCalls {
+		callID := strings.TrimSpace(tc.ID)
+		if callID == "" {
+			callID = fmt.Sprintf("call_%d", time.Now().UnixNano())
+		}
+		output = append(output, map[string]any{
+			"id":        callID,
+			"type":      "function_call",
+			"call_id":   callID,
+			"name":      tc.Name,
+			"arguments": tc.Arguments,
+		})
+		requiredToolCalls = append(requiredToolCalls, map[string]any{
+			"id":   callID,
+			"type": "function",
+			"function": map[string]any{
+				"name":      tc.Name,
+				"arguments": tc.Arguments,
+			},
+		})
 	}
 
 	response := map[string]any{
@@ -1254,12 +1978,55 @@ func translateChatCompletionToResponses(body []byte, model string) (map[string]a
 		"created_at": createdAt,
 		"model":      model,
 		"status":     "completed",
-		"output":     []any{item},
+		"output":     output,
+	}
+	if len(requiredToolCalls) > 0 {
+		response["status"] = "requires_action"
+		response["required_action"] = map[string]any{
+			"type": "submit_tool_outputs",
+			"submit_tool_outputs": map[string]any{
+				"tool_calls": requiredToolCalls,
+			},
+		}
 	}
 	if len(usage) > 0 {
 		response["usage"] = usage
 	}
 	return response, nil
+}
+
+func extractChatCompletionReasoning(payload map[string]any) string {
+	choicesAny, ok := payload["choices"]
+	if !ok {
+		return ""
+	}
+	choices, ok := choicesAny.([]any)
+	if !ok || len(choices) == 0 {
+		return ""
+	}
+	first, ok := choices[0].(map[string]any)
+	if !ok {
+		return ""
+	}
+	msgAny, ok := first["message"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	if rc, ok := msgAny["reasoning_content"].(string); ok {
+		return rc
+	}
+	if rc, ok := msgAny["reasoning"].(string); ok {
+		return rc
+	}
+	return ""
+}
+
+func extractChatCompletionReasoningFromBody(body []byte) string {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return ""
+	}
+	return extractChatCompletionReasoning(payload)
 }
 
 func extractChatCompletionText(payload map[string]any) string {
