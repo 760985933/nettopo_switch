@@ -8,7 +8,7 @@ import (
 
 func TestGenerateCodexConfigToml(t *testing.T) {
 	app := NewApp()
-	app.bridge.listenAddress = "http://127.0.0.1:11434"
+	app.proxy.listenAddress = "http://127.0.0.1:11434"
 
 	got, err := app.GenerateCodexConfigToml()
 	if err != nil {

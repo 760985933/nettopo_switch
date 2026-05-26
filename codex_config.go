@@ -92,9 +92,9 @@ func (a *App) ReadCodexConfigToml() (string, error) {
 }
 
 func (a *App) GenerateCodexConfigToml() (string, error) {
-	status := a.bridge.Status()
+	status := a.proxy.Status()
 	if strings.TrimSpace(status.ListenAddress) == "" {
-		return "", errors.New("桥接服务未启动，无法生成 base_url")
+		return "", errors.New("代理服务未启动，无法生成 base_url")
 	}
 
 	cfg, err := a.GetAppConfig()
@@ -145,9 +145,9 @@ func (a *App) WriteCodexConfigTomlRaw(content string) (string, error) {
 }
 
 func (a *App) WriteCodexConfigToml() (string, error) {
-	status := a.bridge.Status()
+	status := a.proxy.Status()
 	if strings.TrimSpace(status.ListenAddress) == "" {
-		return "", errors.New("桥接服务未启动，无法生成 base_url")
+		return "", errors.New("代理服务未启动，无法生成 base_url")
 	}
 
 	cfg, err := a.GetAppConfig()
@@ -375,7 +375,7 @@ func mergeCodexConfigToml(existing []byte, baseURL string, defaultModel string) 
 
 	modelProviders := ensureTomlMap(doc, "model_providers")
 	provider := ensureTomlMap(modelProviders, codexProviderID)
-	provider["name"] = "Local Bridge (DeepSeek)"
+	provider["name"] = "Local Proxy (DeepSeek)"
 	provider["base_url"] = baseURL
 	provider["wire_api"] = "responses"
 	delete(provider, "env_key")

@@ -5,26 +5,26 @@ import {
   ExportConfig,
   GenerateCodexConfigToml,
   GetAppConfig,
-  GetBridgeStatus,
+  GetProxyStatus,
   GetCodexConfigPath,
   GetLogHistory,
   GetOverviewSnapshot,
   ImportConfig,
   ListCodexConfigBackups,
-  RestartBridge,
+  RestartProxy,
   ReadCodexConfigToml,
   RunHealthCheck,
   RestoreCodexConfigTomlFromBackup,
   RestoreCodexConfigToml,
   SaveAppConfig,
-  StartBridge,
-  StopBridge,
+  StartProxy,
+  StopProxy,
   WriteCodexConfigTomlRaw,
   WriteCodexConfigToml,
 } from '../../wailsjs/go/main/App'
 import type {
   AppConfig,
-  BridgeStatusPayload,
+  ProxyStatusPayload,
   HealthCheckResult,
   LogEntry,
   OverviewSnapshot,
@@ -46,7 +46,7 @@ const FALLBACK_CONFIG: AppConfig = {
   headers: {},
 }
 
-const FALLBACK_STATUS: BridgeStatusPayload = {
+const FALLBACK_STATUS: ProxyStatusPayload = {
   status: 'stopped',
   listenAddress: '',
   startedAt: '',
@@ -58,7 +58,7 @@ const FALLBACK_STATUS: BridgeStatusPayload = {
 export const useAppStore = defineStore('app', {
   state: () => ({
     config: { ...FALLBACK_CONFIG } as AppConfig,
-    status: { ...FALLBACK_STATUS } as BridgeStatusPayload,
+    status: { ...FALLBACK_STATUS } as ProxyStatusPayload,
     recentLogs: [] as LogEntry[],
     healthCheck: null as HealthCheckResult | null,
     quickTips: [] as string[],
@@ -71,7 +71,7 @@ export const useAppStore = defineStore('app', {
       this.applySnapshot(snapshot)
     },
     async refreshStatus() {
-      this.status = (await GetBridgeStatus()) as BridgeStatusPayload
+      this.status = (await GetProxyStatus()) as ProxyStatusPayload
     },
     async refreshConfig() {
       this.config = (await GetAppConfig()) as AppConfig
@@ -83,16 +83,16 @@ export const useAppStore = defineStore('app', {
       this.config = (await SaveAppConfig(config)) as AppConfig
       return this.config
     },
-    async startBridge() {
-      this.status = (await StartBridge()) as BridgeStatusPayload
+    async startProxy() {
+      this.status = (await StartProxy()) as ProxyStatusPayload
       return this.status
     },
-    async stopBridge() {
-      this.status = (await StopBridge()) as BridgeStatusPayload
+    async stopProxy() {
+      this.status = (await StopProxy()) as ProxyStatusPayload
       return this.status
     },
-    async restartBridge() {
-      this.status = (await RestartBridge()) as BridgeStatusPayload
+    async restartProxy() {
+      this.status = (await RestartProxy()) as ProxyStatusPayload
       return this.status
     },
     async runHealthCheck() {
@@ -139,7 +139,7 @@ export const useAppStore = defineStore('app', {
     pushLog(entry: LogEntry) {
       this.recentLogs = [...this.recentLogs.slice(-199), entry]
     },
-    applyStatus(status: BridgeStatusPayload) {
+    applyStatus(status: ProxyStatusPayload) {
       this.status = status
     },
     applySnapshot(snapshot: OverviewSnapshot) {

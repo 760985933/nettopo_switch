@@ -1,4 +1,4 @@
-export type BridgeStatus = 'stopped' | 'starting' | 'running' | 'error'
+export type ProxyStatus = 'stopped' | 'starting' | 'running' | 'error'
 
 export interface AppConfig {
   listenHost: string
@@ -16,8 +16,8 @@ export interface AppConfig {
   headers: Record<string, string>
 }
 
-export interface BridgeStatusPayload {
-  status: BridgeStatus
+export interface ProxyStatusPayload {
+  status: ProxyStatus
   listenAddress: string
   startedAt: string
   uptimeSeconds: number
@@ -47,7 +47,7 @@ export interface HealthCheckResult {
 
 export interface OverviewSnapshot {
   config: AppConfig
-  status: BridgeStatusPayload
+  status: ProxyStatusPayload
   recentLogs: LogEntry[]
   quickTips: string[]
   defaults: Record<string, string>

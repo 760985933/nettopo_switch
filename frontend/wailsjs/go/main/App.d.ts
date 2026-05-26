@@ -16,13 +16,13 @@ export function GetAppConfig():Promise<main.AppConfig>;
 
 export function GetAppVersion():Promise<string>;
 
-export function GetBridgeStatus():Promise<main.BridgeStatusPayload>;
-
 export function GetCodexConfigPath():Promise<string>;
 
 export function GetLogHistory(arg1:number):Promise<Array<main.LogEntry>>;
 
 export function GetOverviewSnapshot():Promise<main.OverviewSnapshot>;
+
+export function GetProxyStatus():Promise<main.ProxyStatusPayload>;
 
 export function ImportConfig(arg1:string):Promise<main.AppConfig>;
 
@@ -30,7 +30,7 @@ export function ListCodexConfigBackups():Promise<Array<string>>;
 
 export function ReadCodexConfigToml():Promise<string>;
 
-export function RestartBridge():Promise<main.BridgeStatusPayload>;
+export function RestartProxy():Promise<main.ProxyStatusPayload>;
 
 export function RestoreCodexConfigToml():Promise<string>;
 
@@ -40,9 +40,9 @@ export function RunHealthCheck():Promise<main.HealthCheckResult>;
 
 export function SaveAppConfig(arg1:main.AppConfig):Promise<main.AppConfig>;
 
-export function StartBridge():Promise<main.BridgeStatusPayload>;
+export function StartProxy():Promise<main.ProxyStatusPayload>;
 
-export function StopBridge():Promise<main.BridgeStatusPayload>;
+export function StopProxy():Promise<main.ProxyStatusPayload>;
 
 export function WriteCodexConfigToml():Promise<string>;
 

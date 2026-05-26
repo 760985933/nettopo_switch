@@ -36,28 +36,6 @@ export namespace main {
 	        this.headers = source["headers"];
 	    }
 	}
-	export class BridgeStatusPayload {
-	    status: string;
-	    listenAddress: string;
-	    startedAt: string;
-	    uptimeSeconds: number;
-	    lastError: string;
-	    requestCount: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new BridgeStatusPayload(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.status = source["status"];
-	        this.listenAddress = source["listenAddress"];
-	        this.startedAt = source["startedAt"];
-	        this.uptimeSeconds = source["uptimeSeconds"];
-	        this.lastError = source["lastError"];
-	        this.requestCount = source["requestCount"];
-	    }
-	}
 	export class HealthCheckItem {
 	    name: string;
 	    ok: boolean;
@@ -128,9 +106,31 @@ export namespace main {
 	        this.requestId = source["requestId"];
 	    }
 	}
+	export class ProxyStatusPayload {
+	    status: string;
+	    listenAddress: string;
+	    startedAt: string;
+	    uptimeSeconds: number;
+	    lastError: string;
+	    requestCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxyStatusPayload(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.listenAddress = source["listenAddress"];
+	        this.startedAt = source["startedAt"];
+	        this.uptimeSeconds = source["uptimeSeconds"];
+	        this.lastError = source["lastError"];
+	        this.requestCount = source["requestCount"];
+	    }
+	}
 	export class OverviewSnapshot {
 	    config: AppConfig;
-	    status: BridgeStatusPayload;
+	    status: ProxyStatusPayload;
 	    recentLogs: LogEntry[];
 	    quickTips: string[];
 	    defaults: Record<string, string>;
@@ -143,7 +143,7 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.config = this.convertValues(source["config"], AppConfig);
-	        this.status = this.convertValues(source["status"], BridgeStatusPayload);
+	        this.status = this.convertValues(source["status"], ProxyStatusPayload);
 	        this.recentLogs = this.convertValues(source["recentLogs"], LogEntry);
 	        this.quickTips = source["quickTips"];
 	        this.defaults = source["defaults"];
@@ -168,6 +168,7 @@ export namespace main {
 		    return a;
 		}
 	}
+	
 	export class UpdateCheckResult {
 	    currentVersion: string;
 	    latestVersion: string;

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { BridgeStatusPayload, HealthCheckResult } from '../types'
+import type { ProxyStatusPayload, HealthCheckResult } from '../types'
 
 const props = defineProps<{
-  status: BridgeStatusPayload
+  status: ProxyStatusPayload
   health: HealthCheckResult | null
   loading: boolean
 }>()

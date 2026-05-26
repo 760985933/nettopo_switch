@@ -1,16 +1,16 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 import { EventsOff, EventsOn } from '../../wailsjs/runtime/runtime'
-import type { BridgeStatusPayload, LogEntry } from '../types'
+import type { ProxyStatusPayload, LogEntry } from '../types'
 
-interface BridgeEventHandlers {
-  onStatus?: (payload: BridgeStatusPayload) => void
+interface ProxyEventHandlers {
+  onStatus?: (payload: ProxyStatusPayload) => void
   onLog?: (entry: LogEntry) => void
 }
 
-export function useBridgeEvents(handlers: BridgeEventHandlers): void {
+export function useProxyEvents(handlers: ProxyEventHandlers): void {
   onMounted(() => {
     if (handlers.onStatus) {
-      void EventsOn('bridge:status', handlers.onStatus)
+      void EventsOn('proxy:status', handlers.onStatus)
     }
     if (handlers.onLog) {
       void EventsOn('log:entry', handlers.onLog)
@@ -18,7 +18,7 @@ export function useBridgeEvents(handlers: BridgeEventHandlers): void {
   })
 
   onBeforeUnmount(() => {
-    void EventsOff('bridge:status')
+    void EventsOff('proxy:status')
     void EventsOff('log:entry')
   })
 }

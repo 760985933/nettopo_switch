@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { AppConfig, BridgeStatusPayload } from '../types'
+import type { AppConfig, ProxyStatusPayload } from '../types'
 import KeyValueEditor from './KeyValueEditor.vue'
 import { maskSecret } from '../utils/format'
 
 const props = defineProps<{
   config: AppConfig
-  status: BridgeStatusPayload
+  status: ProxyStatusPayload
   loading: boolean
 }>()
 

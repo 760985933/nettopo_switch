@@ -1,12 +1,12 @@
-# Nettopo Switch (Codex ↔ DeepSeek Local Bridge)
+# Nettopo Switch (Codex ↔ DeepSeek Local Proxy)
 
 [中文](README.zh.md)
 
 ## Overview
 
-Nettopo Switch is a local bridge that adapts Codex-compatible `POST /v1/responses` (including SSE streaming) and forwards requests to DeepSeek `POST /v1/chat/completions`. It also provides a desktop UI to manage endpoints, API keys, ports, and model mappings, plus tools to manage Codex `config.toml` with safe backups.
+Nettopo Switch is a local proxy that adapts Codex-compatible `POST /v1/responses` (including SSE streaming) and forwards requests to DeepSeek `POST /v1/chat/completions`. It also provides a desktop UI to manage endpoints, API keys, ports, and model mappings, plus tools to manage Codex `config.toml` with safe backups.
 
-This is designed to work with Codex Desktop by pointing Codex's Base URL to the local bridge, so Codex can use DeepSeek models without changing its workflow.
+This is designed to work with Codex Desktop by pointing Codex's Base URL to the local proxy, so Codex can use DeepSeek models without changing its workflow.
 
 ## Features
 
@@ -33,7 +33,7 @@ This is designed to work with Codex Desktop by pointing Codex's Base URL to the 
 - API Key: your DeepSeek key
 - Default model: e.g. `deepseek-v4-flash`
 
-2) Start the bridge service (default listen: `http://127.0.0.1:11434`)
+2) Start the proxy service (default listen: `http://127.0.0.1:11434`)
 
 3) Verify:
 

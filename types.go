@@ -1,12 +1,12 @@
 package main
 
-type BridgeStatus string
+type ProxyStatus string
 
 const (
-	BridgeStopped  BridgeStatus = "stopped"
-	BridgeStarting BridgeStatus = "starting"
-	BridgeRunning  BridgeStatus = "running"
-	BridgeError    BridgeStatus = "error"
+	ProxyStopped  ProxyStatus = "stopped"
+	ProxyStarting ProxyStatus = "starting"
+	ProxyRunning  ProxyStatus = "running"
+	ProxyError    ProxyStatus = "error"
 )
 
 type AppConfig struct {
@@ -25,8 +25,8 @@ type AppConfig struct {
 	Headers          map[string]string `json:"headers"`
 }
 
-type BridgeStatusPayload struct {
-	Status        BridgeStatus `json:"status"`
+type ProxyStatusPayload struct {
+	Status        ProxyStatus `json:"status"`
 	ListenAddress string       `json:"listenAddress"`
 	StartedAt     string       `json:"startedAt"`
 	UptimeSeconds int64        `json:"uptimeSeconds"`
@@ -36,7 +36,7 @@ type BridgeStatusPayload struct {
 
 type OverviewSnapshot struct {
 	Config     AppConfig           `json:"config"`
-	Status     BridgeStatusPayload `json:"status"`
+	Status     ProxyStatusPayload `json:"status"`
 	RecentLogs []LogEntry          `json:"recentLogs"`
 	QuickTips  []string            `json:"quickTips"`
 	Defaults   map[string]string   `json:"defaults"`

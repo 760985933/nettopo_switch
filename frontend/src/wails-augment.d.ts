@@ -16,20 +16,20 @@ declare module '../wailsjs/go/main/App' {
  export function GenerateCodexConfigToml(): Promise<string>
  export function GetAppConfig(): Promise<main.AppConfig>
  export function GetAppVersion(): Promise<string>
- export function GetBridgeStatus(): Promise<main.BridgeStatusPayload>
+ export function GetProxyStatus(): Promise<main.ProxyStatusPayload>
  export function GetCodexConfigPath(): Promise<string>
  export function GetLogHistory(count: number): Promise<Array<main.LogEntry>>
  export function GetOverviewSnapshot(): Promise<main.OverviewSnapshot>
  export function ImportConfig(configStr: string): Promise<main.AppConfig>
  export function ListCodexConfigBackups(): Promise<string[]>
  export function ReadCodexConfigToml(): Promise<string>
- export function RestartBridge(): Promise<main.BridgeStatusPayload>
+ export function RestartProxy(): Promise<main.ProxyStatusPayload>
  export function RestoreCodexConfigToml(): Promise<string>
  export function RestoreCodexConfigTomlFromBackup(backupPath: string): Promise<string>
  export function RunHealthCheck(): Promise<main.HealthCheckResult>
  export function SaveAppConfig(config: main.AppConfig): Promise<main.AppConfig>
- export function StartBridge(): Promise<main.BridgeStatusPayload>
- export function StopBridge(): Promise<main.BridgeStatusPayload>
+ export function StartProxy(): Promise<main.ProxyStatusPayload>
+ export function StopProxy(): Promise<main.ProxyStatusPayload>
  export function WriteCodexConfigToml(): Promise<string>
  export function WriteCodexConfigTomlRaw(content: string): Promise<string>
 }
@@ -46,20 +46,20 @@ interface Window {
  GenerateCodexConfigToml: () => Promise<string>
  GetAppConfig: () => Promise<main.AppConfig>
  GetAppVersion: () => Promise<string>
- GetBridgeStatus: () => Promise<main.BridgeStatusPayload>
+ GetProxyStatus: () => Promise<main.ProxyStatusPayload>
  GetCodexConfigPath: () => Promise<string>
  GetLogHistory: (arg1: number) => Promise<Array<main.LogEntry>>
  GetOverviewSnapshot: () => Promise<main.OverviewSnapshot>
  ImportConfig: (arg1: string) => Promise<main.AppConfig>
  ListCodexConfigBackups: () => Promise<string[]>
  ReadCodexConfigToml: () => Promise<string>
- RestartBridge: () => Promise<main.BridgeStatusPayload>
+ RestartProxy: () => Promise<main.ProxyStatusPayload>
  RestoreCodexConfigToml: () => Promise<string>
  RestoreCodexConfigTomlFromBackup: (arg1: string) => Promise<string>
  RunHealthCheck: () => Promise<main.HealthCheckResult>
  SaveAppConfig: (arg1: main.AppConfig) => Promise<main.AppConfig>
- StartBridge: () => Promise<main.BridgeStatusPayload>
- StopBridge: () => Promise<main.BridgeStatusPayload>
+ StartProxy: () => Promise<main.ProxyStatusPayload>
+ StopProxy: () => Promise<main.ProxyStatusPayload>
  WriteCodexConfigToml: () => Promise<string>
  WriteCodexConfigTomlRaw: (arg1: string) => Promise<string>
  }
@@ -84,7 +84,7 @@ declare namespace main {
  mappings: Record<string, string>
  headers: Record<string, string>
  }
- export class BridgeStatusPayload {
+ export class ProxyStatusPayload {
  status: string
  listenAddress: string
  startedAt: string
@@ -111,7 +111,7 @@ declare namespace main {
  }
  export class OverviewSnapshot {
  config: AppConfig
- status: BridgeStatusPayload
+ status: ProxyStatusPayload
  recentLogs: LogEntry[]
  quickTips: string[]
  defaults: Record<string, string>

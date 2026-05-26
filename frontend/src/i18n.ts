@@ -54,15 +54,15 @@ export const messages = {
         codexWrite: { title: '写入 Codex config.toml', ok: '知道了' },
       },
       errors: {
-        timeoutStopped: '操作超时：{seconds} 秒内未完成，已停止桥接启动',
+        timeoutStopped: '操作超时：{seconds} 秒内未完成，已停止代理启动',
       },
     },
     overview: {
       toast: {
         configSaved: '配置已保存',
-        bridgeStarted: '桥接服务已启动',
-        bridgeStopped: '桥接服务已停止',
-        bridgeRestarted: '桥接服务已重启',
+        proxyStarted: '代理服务已启动',
+        proxyStopped: '代理服务已停止',
+        proxyRestarted: '代理服务已重启',
         clipboardCopied: '已复制到剪贴板',
       },
       health: {
@@ -81,7 +81,7 @@ export const messages = {
       title: '偏好设置',
       language: '语言',
       switches: {
-        autoStart: '自动启动桥接',
+        autoStart: '自动启动代理',
         minimizeToTray: '关闭时隐藏窗口',
         compactMode: '紧凑布局',
       },
@@ -94,7 +94,7 @@ export const messages = {
       },
       codex: {
         title: 'Codex config.toml',
-        desc: '用于让 Codex 走本地桥接。支持直接编辑、保存，并自动生成历史备份用于回滚。',
+        desc: '用于让 Codex 走本地代理。支持直接编辑、保存，并自动生成历史备份用于回滚。',
         filePath: '文件路径',
         content: '内容（可直接编辑）',
         wireApiFix:
@@ -148,7 +148,7 @@ export const messages = {
       desc: '主界面只保留高频字段，高级映射通过折叠区收纳。',
       actions: {
         save: '保存配置',
-        start: '启动桥接',
+        start: '启动代理',
         restart: '重启',
         stop: '停止',
         copyLocal: '复制本地地址',
@@ -190,8 +190,8 @@ export const messages = {
       actions: { copyBaseUrl: '复制 Base URL', openPreferences: '打开偏好设置', restoreDefault: '恢复默认' },
       step: {
         one: {
-          title: '启动桥接服务',
-          notRunning: '未启动（先在左侧点击“启动桥接”）',
+          title: '启动代理服务',
+          notRunning: '未启动（先在左侧点击“启动代理”）',
           hint: '启动成功后会在本机监听一个地址，Codex 会通过它访问 /v1 接口。',
         },
         two: {
@@ -228,14 +228,14 @@ export const messages = {
         codexCopy: { title: 'Generate Codex config.toml', ok: 'OK' },
         codexWrite: { title: 'Write Codex config.toml', ok: 'OK' },
       },
-      errors: { timeoutStopped: 'Timed out: not finished in {seconds}s; bridge start stopped' },
+      errors: { timeoutStopped: 'Timed out: not finished in {seconds}s; proxy start stopped' },
     },
     overview: {
       toast: {
         configSaved: 'Config saved',
-        bridgeStarted: 'Bridge started',
-        bridgeStopped: 'Bridge stopped',
-        bridgeRestarted: 'Bridge restarted',
+        proxyStarted: 'Proxy started',
+        proxyStopped: 'Proxy stopped',
+        proxyRestarted: 'Proxy restarted',
         clipboardCopied: 'Copied to clipboard',
       },
       health: {
@@ -253,12 +253,12 @@ export const messages = {
     settings: {
       title: 'Preferences',
       language: 'Language',
-      switches: { autoStart: 'Auto-start bridge', minimizeToTray: 'Hide window on close', compactMode: 'Compact layout' },
+      switches: { autoStart: 'Auto-start proxy', minimizeToTray: 'Hide window on close', compactMode: 'Compact layout' },
       form: { logRetentionDays: 'Log retention (days)' },
       actions: { save: 'Save', exportConfig: 'Export', copyToml: 'Copy TOML', writeFile: 'Write File' },
       codex: {
         title: 'Codex config.toml',
-        desc: 'Make Codex use the local bridge. Supports editing, saving, and auto backup for rollback.',
+        desc: 'Make Codex use the local proxy. Supports editing, saving, and auto backup for rollback.',
         filePath: 'File path',
         content: 'Content (editable)',
         wireApiFix:
@@ -312,7 +312,7 @@ export const messages = {
       desc: 'Keep high-frequency fields here; advanced mappings are in the collapsible section.',
       actions: {
         save: 'Save',
-        start: 'Start bridge',
+        start: 'Start proxy',
         restart: 'Restart',
         stop: 'Stop',
         copyLocal: 'Copy local URL',
@@ -354,8 +354,8 @@ export const messages = {
       actions: { copyBaseUrl: 'Copy Base URL', openPreferences: 'Open preferences', restoreDefault: 'Restore default' },
       step: {
         one: {
-          title: 'Start the bridge',
-          notRunning: 'Not running (click "Start bridge" on the left first)',
+          title: 'Start the proxy',
+          notRunning: 'Not running (click "Start proxy" on the left first)',
           hint: 'After start, it listens on a local address and exposes the /v1 API for Codex.',
         },
         two: {
@@ -397,9 +397,9 @@ export const messages = {
     overview: {
       toast: {
         configSaved: '設定を保存しました',
-        bridgeStarted: 'ブリッジを起動しました',
-        bridgeStopped: 'ブリッジを停止しました',
-        bridgeRestarted: 'ブリッジを再起動しました',
+        proxyStarted: 'ブリッジを起動しました',
+        proxyStopped: 'ブリッジを停止しました',
+        proxyRestarted: 'ブリッジを再起動しました',
         clipboardCopied: 'クリップボードにコピーしました',
       },
       health: { ok: 'ヘルスチェック成功', bad: 'ヘルスチェックに問題があります。詳細はコンソールを確認してください。' },
@@ -553,9 +553,9 @@ export const messages = {
     overview: {
       toast: {
         configSaved: '설정이 저장되었습니다',
-        bridgeStarted: '브리지가 시작되었습니다',
-        bridgeStopped: '브리지가 중지되었습니다',
-        bridgeRestarted: '브리지가 재시작되었습니다',
+        proxyStarted: '브리지가 시작되었습니다',
+        proxyStopped: '브리지가 중지되었습니다',
+        proxyRestarted: '브리지가 재시작되었습니다',
         clipboardCopied: '클립보드에 복사했습니다',
       },
       health: { ok: '헬스 체크 통과', bad: '헬스 체크에 문제가 있습니다. 콘솔에서 확인하세요.' },
@@ -709,9 +709,9 @@ export const messages = {
     overview: {
       toast: {
         configSaved: 'Configuration enregistrée',
-        bridgeStarted: 'Bridge démarré',
-        bridgeStopped: 'Bridge arrêté',
-        bridgeRestarted: 'Bridge redémarré',
+        proxyStarted: 'Proxy démarré',
+        proxyStopped: 'Proxy arrêté',
+        proxyRestarted: 'Proxy redémarré',
         clipboardCopied: 'Copié dans le presse-papiers',
       },
       health: { ok: 'Contrôle OK', bad: 'Problèmes détectés. Voir la console.' },
@@ -731,7 +731,7 @@ export const messages = {
       actions: { save: 'Enregistrer', exportConfig: 'Exporter', copyToml: 'Copier TOML', writeFile: 'Écrire le fichier' },
       codex: {
         title: 'Codex config.toml',
-        desc: 'Fait passer Codex par le bridge local. Édition, sauvegarde et sauvegardes automatiques.',
+        desc: 'Fait passer Codex par le proxy local. Édition, sauvegarde et sauvegardes automatiques.',
         filePath: 'Chemin du fichier',
         content: 'Contenu (modifiable)',
         wireApiFix:
@@ -822,7 +822,7 @@ export const messages = {
       actions: { copyBaseUrl: 'Copier Base URL', openPreferences: 'Ouvrir préférences', restoreDefault: 'Restaurer défaut' },
       step: {
         one: {
-          title: 'Démarrer le bridge',
+          title: 'Démarrer le proxy',
           notRunning: 'Arrêté (cliquez "Démarrer" à gauche)',
           hint: 'Après démarrage, un /v1 local est exposé pour Codex.',
         },
@@ -865,9 +865,9 @@ export const messages = {
     overview: {
       toast: {
         configSaved: 'Konfiguration gespeichert',
-        bridgeStarted: 'Bridge gestartet',
-        bridgeStopped: 'Bridge gestoppt',
-        bridgeRestarted: 'Bridge neu gestartet',
+        proxyStarted: 'Proxy gestartet',
+        proxyStopped: 'Proxy gestoppt',
+        proxyRestarted: 'Proxy neu gestartet',
         clipboardCopied: 'In Zwischenablage kopiert',
       },
       health: { ok: 'Health-Check ok', bad: 'Probleme erkannt. Details in der Konsole.' },
@@ -887,7 +887,7 @@ export const messages = {
       actions: { save: 'Speichern', exportConfig: 'Exportieren', copyToml: 'TOML kopieren', writeFile: 'Datei schreiben' },
       codex: {
         title: 'Codex config.toml',
-        desc: 'Codex über die lokale Bridge. Bearbeiten, Speichern und automatische Backups.',
+        desc: 'Codex über den lokalen Proxy. Bearbeiten, Speichern und automatische Backups.',
         filePath: 'Dateipfad',
         content: 'Inhalt (bearbeitbar)',
         wireApiFix:
@@ -977,7 +977,7 @@ export const messages = {
       title: 'Anleitung',
       actions: { copyBaseUrl: 'Base URL kopieren', openPreferences: 'Einstellungen öffnen', restoreDefault: 'Standard wiederherstellen' },
       step: {
-        one: { title: 'Bridge starten', notRunning: 'Gestoppt (links "Starten" klicken)', hint: 'Nach dem Start wird lokal /v1 für Codex bereitgestellt.' },
+        one: { title: 'Proxy starten', notRunning: 'Gestoppt (links "Starten" klicken)', hint: 'Nach dem Start wird lokal /v1 für Codex bereitgestellt.' },
         two: {
           title: 'Codex lokal konfigurieren',
           baseUrl: 'Base URL',
@@ -1017,9 +1017,9 @@ export const messages = {
     overview: {
       toast: {
         configSaved: 'Configuración guardada',
-        bridgeStarted: 'Bridge iniciado',
-        bridgeStopped: 'Bridge detenido',
-        bridgeRestarted: 'Bridge reiniciado',
+        proxyStarted: 'Proxy iniciado',
+        proxyStopped: 'Proxy detenido',
+        proxyRestarted: 'Proxy reiniciado',
         clipboardCopied: 'Copiado al portapapeles',
       },
       health: { ok: 'Salud OK', bad: 'Se detectaron problemas. Ver consola.' },
@@ -1039,7 +1039,7 @@ export const messages = {
       actions: { save: 'Guardar', exportConfig: 'Exportar', copyToml: 'Copiar TOML', writeFile: 'Escribir archivo' },
       codex: {
         title: 'Codex config.toml',
-        desc: 'Hace que Codex use el bridge local. Permite editar/guardar y backups automáticos.',
+        desc: 'Hace que Codex use el proxy local. Permite editar/guardar y backups automáticos.',
         filePath: 'Ruta del archivo',
         content: 'Contenido (editable)',
         wireApiFix:
@@ -1129,7 +1129,7 @@ export const messages = {
       title: 'Guía',
       actions: { copyBaseUrl: 'Copiar Base URL', openPreferences: 'Abrir preferencias', restoreDefault: 'Restaurar por defecto' },
       step: {
-        one: { title: 'Inicia el bridge', notRunning: 'Detenido (pulsa "Iniciar" a la izquierda)', hint: 'Tras iniciar, expone /v1 local para Codex.' },
+        one: { title: 'Inicia el proxy', notRunning: 'Detenido (pulsa "Iniciar" a la izquierda)', hint: 'Tras iniciar, expone /v1 local para Codex.' },
         two: {
           title: 'Apunta Codex a local',
           baseUrl: 'Base URL',

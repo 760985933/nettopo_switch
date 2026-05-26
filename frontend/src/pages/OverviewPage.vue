@@ -6,7 +6,7 @@ import { ClipboardSetText } from '../../wailsjs/runtime/runtime'
 import ConfigPanel from '../components/ConfigPanel.vue'
 import ConsolePanel from '../components/ConsolePanel.vue'
 import QuickGuideCard from '../components/QuickGuideCard.vue'
-import { useBridgeEvents } from '../composables/useBridgeEvents'
+import { useProxyEvents } from '../composables/useProxyEvents'
 import { useAppStore } from '../stores/app'
 import type { AppConfig } from '../types'
 
@@ -63,12 +63,12 @@ async function handleSave(config: AppConfig) {
 async function handleStart(config: AppConfig) {
   await wrapAction(async () => {
     await store.saveConfig(config)
-    return store.startBridge()
-  }, t('overview.toast.bridgeStarted'), {
+    return store.startProxy()
+  }, t('overview.toast.proxyStarted'), {
     timeoutMs: 5000,
     onTimeout: async () => {
       try {
-        await store.stopBridge()
+        await store.stopProxy()
       } finally {
         await store.refreshStatus()
       }
@@ -77,11 +77,11 @@ async function handleStart(config: AppConfig) {
 }
 
 async function handleStop() {
-  await wrapAction(async () => store.stopBridge(), t('overview.toast.bridgeStopped'))
+  await wrapAction(async () => store.stopProxy(), t('overview.toast.proxyStopped'))
 }
 
 async function handleRestart() {
-  await wrapAction(async () => store.restartBridge(), t('overview.toast.bridgeRestarted'))
+  await wrapAction(async () => store.restartProxy(), t('overview.toast.proxyRestarted'))
 }
 
 async function handleHealth() {
@@ -96,7 +96,7 @@ async function copyText(value: string) {
   message.success(t('overview.toast.clipboardCopied'))
 }
 
-useBridgeEvents({
+useProxyEvents({
   onStatus(payload) {
     store.applyStatus(payload)
   },

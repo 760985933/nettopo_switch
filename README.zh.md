@@ -1,10 +1,10 @@
-# Nettopo Switch (Codex ↔ DeepSeek 本地桥接)
+# Nettopo Switch (Codex ↔ DeepSeek 本地代理)
 
 [English](README.md)
 
 ---
 
-该项目面向 Codex Desktop：通过把 Codex 的 Base URL 指向本地桥接地址，让 Codex Desktop 走 DeepSeek 的模型能力（无需改变 Codex 的使用方式）。
+该项目面向 Codex Desktop：通过把 Codex 的 Base URL 指向本地代理地址，让 Codex Desktop 走 DeepSeek 的模型能力（无需改变 Codex 的使用方式）。
 
 ## 功能
 
@@ -33,7 +33,7 @@
 - API Key：你的 DeepSeek Key
 - 默认模型：例如 `deepseek-v4-flash`
 
-2) 启动桥接服务（默认监听 `http://127.0.0.1:11434`）
+2) 启动代理服务（默认监听 `http://127.0.0.1:11434`）
 
 3) 验证：
 

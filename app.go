@@ -26,7 +26,7 @@ const updateDownloadURLTemplate = ""
 type App struct {
 	ctx    context.Context
 	store  *ConfigStore
-	bridge *BridgeRuntime
+	proxy *ProxyRuntime
 
 	mu     sync.RWMutex
 	config AppConfig
@@ -44,7 +44,7 @@ func NewApp() *App {
 	app := &App{
 		store: store,
 	}
-	app.bridge = NewBridgeRuntime(app)
+	app.proxy = NewProxyRuntime(app)
 	return app
 }
 
@@ -66,7 +66,7 @@ func (a *App) startup(ctx context.Context) {
 	if cfg.EnableAutoStart {
 		go func() {
 			time.Sleep(800 * time.Millisecond)
-			if _, err := a.StartBridge(); err != nil {
+			if _, err := a.StartProxy(); err != nil {
 				a.appendLog("error", "app", "自动启动失败: "+err.Error(), "")
 			}
 		}()
@@ -291,45 +291,45 @@ func (a *App) ImportConfig(payload string) (AppConfig, error) {
 	return a.SaveAppConfig(cfg)
 }
 
-func (a *App) StartBridge() (BridgeStatusPayload, error) {
+func (a *App) StartProxy() (ProxyStatusPayload, error) {
 	cfg, err := a.GetAppConfig()
 	if err != nil {
-		return BridgeStatusPayload{}, err
+		return ProxyStatusPayload{}, err
 	}
 	a.appendLog("info", "app", fmt.Sprintf("收到启动请求: %s:%d -> %s (%s)", cfg.ListenHost, cfg.ListenPort, cfg.DeepseekBaseURL, cfg.DefaultModel), "")
 	if err := validateConfig(cfg, true); err != nil {
 		a.appendLog("warn", "app", "启动前配置校验失败: "+err.Error(), "")
-		return BridgeStatusPayload{}, err
+		return ProxyStatusPayload{}, err
 	}
-	if err := a.bridge.Start(cfg); err != nil {
-		a.appendLog("error", "app", "启动桥接失败: "+err.Error(), "")
-		return BridgeStatusPayload{}, err
+	if err := a.proxy.Start(cfg); err != nil {
+		a.appendLog("error", "app", "启动代理失败: "+err.Error(), "")
+		return ProxyStatusPayload{}, err
 	}
-	status := a.bridge.Status()
+	status := a.proxy.Status()
 	a.appendLog("info", "app", "启动命令已提交: "+status.ListenAddress, "")
 	return status, nil
 }
 
-func (a *App) StopBridge() (BridgeStatusPayload, error) {
+func (a *App) StopProxy() (ProxyStatusPayload, error) {
 	a.appendLog("info", "app", "收到停止请求", "")
-	if err := a.bridge.Stop(); err != nil {
-		a.appendLog("error", "app", "停止桥接失败: "+err.Error(), "")
-		return BridgeStatusPayload{}, err
+	if err := a.proxy.Stop(); err != nil {
+		a.appendLog("error", "app", "停止代理失败: "+err.Error(), "")
+		return ProxyStatusPayload{}, err
 	}
-	return a.bridge.Status(), nil
+	return a.proxy.Status(), nil
 }
 
-func (a *App) RestartBridge() (BridgeStatusPayload, error) {
+func (a *App) RestartProxy() (ProxyStatusPayload, error) {
 	a.appendLog("info", "app", "收到重启请求", "")
-	if err := a.bridge.Stop(); err != nil {
+	if err := a.proxy.Stop(); err != nil {
 		a.appendLog("error", "app", "重启时停止失败: "+err.Error(), "")
-		return BridgeStatusPayload{}, err
+		return ProxyStatusPayload{}, err
 	}
-	return a.StartBridge()
+	return a.StartProxy()
 }
 
-func (a *App) GetBridgeStatus() BridgeStatusPayload {
-	return a.bridge.Status()
+func (a *App) GetProxyStatus() ProxyStatusPayload {
+	return a.proxy.Status()
 }
 
 func (a *App) GetOverviewSnapshot() (OverviewSnapshot, error) {
@@ -340,7 +340,7 @@ func (a *App) GetOverviewSnapshot() (OverviewSnapshot, error) {
 
 	return OverviewSnapshot{
 		Config:     cfg,
-		Status:     a.bridge.Status(),
+		Status:     a.proxy.Status(),
 		RecentLogs: a.GetLogHistory(6),
 		QuickTips: []string{
 			"先填写 DeepSeek Base URL、API Key 和默认模型。",
@@ -386,22 +386,22 @@ func (a *App) RunHealthCheck() (HealthCheckResult, error) {
 		})
 	}
 
-	if a.bridge.IsRunning() {
+	if a.proxy.IsRunning() {
 		result.Checks = append(result.Checks, HealthCheckItem{
-			Name:    "本地桥接服务",
+			Name:    "本地代理服务",
 			OK:      true,
-			Message: "桥接服务正在运行: " + a.bridge.Status().ListenAddress,
+			Message: "代理服务正在运行: " + a.proxy.Status().ListenAddress,
 		})
 	} else {
 		result.OK = false
 		result.Checks = append(result.Checks, HealthCheckItem{
-			Name:    "本地桥接服务",
+			Name:    "本地代理服务",
 			OK:      false,
-			Message: "桥接服务未启动",
+			Message: "代理服务未启动",
 		})
 	}
 
-	upstreamErr := a.bridge.CheckUpstream(cfg)
+	upstreamErr := a.proxy.CheckUpstream(cfg)
 	if upstreamErr != nil {
 		result.OK = false
 		result.Checks = append(result.Checks, HealthCheckItem{
@@ -417,7 +417,7 @@ func (a *App) RunHealthCheck() (HealthCheckResult, error) {
 		})
 	}
 
-	if status, msg, at := a.bridge.getLastUpstreamFailure(); status == 402 && !at.IsZero() && time.Since(at) < 24*time.Hour {
+	if status, msg, at := a.proxy.getLastUpstreamFailure(); status == 402 && !at.IsZero() && time.Since(at) < 24*time.Hour {
 		result.OK = false
 		hint := "检测到最近一次上游请求返回 402（余额不足/额度不足）。请充值或更换 API Key。"
 		if strings.TrimSpace(msg) != "" {
@@ -471,8 +471,8 @@ func (a *App) appendLog(level string, source string, message string, requestID s
 func (a *App) emitStatus() {
 	if a.ctx != nil {
 		ctx := a.ctx
-		payload := a.bridge.Status()
-		go runtime.EventsEmit(ctx, "bridge:status", payload)
+		payload := a.proxy.Status()
+		go runtime.EventsEmit(ctx, "proxy:status", payload)
 	}
 }
 
@@ -489,10 +489,10 @@ func validateConfig(cfg AppConfig, requireCredentials bool) error {
 	if parsed, err := url.Parse(strings.TrimSpace(cfg.DeepseekBaseURL)); err == nil && parsed.Host != "" {
 		if parsed.Port() != "" {
 			if net.JoinHostPort(parsed.Hostname(), parsed.Port()) == net.JoinHostPort(strings.TrimSpace(cfg.ListenHost), fmt.Sprintf("%d", cfg.ListenPort)) {
-				return errors.New("DeepSeek Base URL 不能指向本桥接地址（会导致请求循环）")
+				return errors.New("DeepSeek Base URL 不能指向本代理地址（会导致请求循环）")
 			}
 		} else if parsed.Hostname() == strings.TrimSpace(cfg.ListenHost) {
-			return errors.New("DeepSeek Base URL 不能指向本桥接地址（会导致请求循环）")
+			return errors.New("DeepSeek Base URL 不能指向本代理地址（会导致请求循环）")
 		}
 	}
 	if requireCredentials && strings.TrimSpace(cfg.APIKey) == "" {

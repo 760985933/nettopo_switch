@@ -20,13 +20,13 @@ import (
 	"time"
 )
 
-type BridgeRuntime struct {
+type ProxyRuntime struct {
 	app *App
 
 	mu                 sync.RWMutex
 	server             *http.Server
 	listener           net.Listener
-	status             BridgeStatus
+	status             ProxyStatus
 	listenAddress      string
 	startedAt          time.Time
 	lastError          string
@@ -39,25 +39,25 @@ type BridgeRuntime struct {
 	lastUpstreamAt     time.Time
 }
 
-func NewBridgeRuntime(app *App) *BridgeRuntime {
-	return &BridgeRuntime{
+func NewProxyRuntime(app *App) *ProxyRuntime {
+	return &ProxyRuntime{
 		app:    app,
-		status: BridgeStopped,
+		status: ProxyStopped,
 	}
 }
 
-func (b *BridgeRuntime) Start(cfg AppConfig) error {
+func (b *ProxyRuntime) Start(cfg AppConfig) error {
 	b.mu.Lock()
 
 	if b.server != nil {
 		b.mu.Unlock()
-		return errors.New("桥接服务已经在运行")
+		return errors.New("代理服务已经在运行")
 	}
 
 	addr := net.JoinHostPort(cfg.ListenHost, strconv.Itoa(cfg.ListenPort))
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		b.status = BridgeError
+		b.status = ProxyError
 		b.lastError = err.Error()
 		b.mu.Unlock()
 		b.app.appendLog("error", "proxy", "监听失败: "+err.Error(), "")
@@ -71,13 +71,13 @@ func (b *BridgeRuntime) Start(cfg AppConfig) error {
 	mux.HandleFunc("/v1/models", b.handleModels)
 	mux.HandleFunc("/v1/chat/completions", b.handleChatCompletions)
 	mux.HandleFunc("/v1/responses", b.handleResponses)
-
+	mux.HandleFunc("/v1/messages", b.handleMessages)
 	b.server = &http.Server{
 		Handler:           b.withAccessLog(mux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	b.listener = listener
-	b.status = BridgeRunning
+	b.status = ProxyRunning
 	b.listenAddress = "http://" + listener.Addr().String()
 	b.startedAt = time.Now()
 	b.lastError = ""
@@ -93,13 +93,13 @@ func (b *BridgeRuntime) Start(cfg AppConfig) error {
 	listenAddress := b.listenAddress
 	b.mu.Unlock()
 
-	b.app.appendLog("info", "proxy", "桥接服务已监听: "+listenAddress, "")
+	b.app.appendLog("info", "proxy", "代理服务已监听: "+listenAddress, "")
 	b.app.emitStatus()
 
 	go func() {
 		err := server.Serve(ln)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			b.setStatus(BridgeError, err.Error())
+			b.setStatus(ProxyError, err.Error())
 			b.app.appendLog("error", "proxy", "服务异常退出: "+err.Error(), "")
 			return
 		}
@@ -135,7 +135,7 @@ func (s *statusRecorder) Flush() {
 	}
 }
 
-func (b *BridgeRuntime) withAccessLog(next http.Handler) http.Handler {
+func (b *ProxyRuntime) withAccessLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startedAt := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w}
@@ -151,7 +151,7 @@ func (b *BridgeRuntime) withAccessLog(next http.Handler) http.Handler {
 		if ua == "" {
 			ua = "-"
 		}
-		requestID := recorder.Header().Get("x-bridge-request-id")
+		requestID := recorder.Header().Get("x-proxy-request-id")
 		message := fmt.Sprintf("%s %s -> %d (%dms) bytes=%d ua=%s", r.Method, r.URL.Path, statusCode, duration, recorder.size, ua)
 		if strings.TrimSpace(requestID) != "" {
 			message += " rid=" + requestID
@@ -160,7 +160,7 @@ func (b *BridgeRuntime) withAccessLog(next http.Handler) http.Handler {
 	})
 }
 
-func (b *BridgeRuntime) Stop() error {
+func (b *ProxyRuntime) Stop() error {
 	b.mu.Lock()
 	server := b.server
 	b.server = nil
@@ -172,7 +172,7 @@ func (b *BridgeRuntime) Stop() error {
 	b.mu.Unlock()
 
 	if server == nil {
-		b.setStatus(BridgeStopped, "")
+		b.setStatus(ProxyStopped, "")
 		return nil
 	}
 
@@ -184,21 +184,21 @@ func (b *BridgeRuntime) Stop() error {
 		_ = listener.Close()
 	}
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		b.setStatus(BridgeError, err.Error())
+		b.setStatus(ProxyError, err.Error())
 		b.app.appendLog("error", "proxy", "停止服务失败: "+err.Error(), "")
 		return err
 	}
 
-	b.setStatus(BridgeStopped, "")
-	b.app.appendLog("info", "proxy", "桥接服务已停止", "")
+	b.setStatus(ProxyStopped, "")
+	b.app.appendLog("info", "proxy", "代理服务已停止", "")
 	return nil
 }
 
-func (b *BridgeRuntime) Status() BridgeStatusPayload {
+func (b *ProxyRuntime) Status() ProxyStatusPayload {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	payload := BridgeStatusPayload{
+	payload := ProxyStatusPayload{
 		Status:        b.status,
 		ListenAddress: b.listenAddress,
 		LastError:     b.lastError,
@@ -211,13 +211,13 @@ func (b *BridgeRuntime) Status() BridgeStatusPayload {
 	return payload
 }
 
-func (b *BridgeRuntime) IsRunning() bool {
+func (b *ProxyRuntime) IsRunning() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	return b.status == BridgeRunning && b.server != nil
+	return b.status == ProxyRunning && b.server != nil
 }
 
-func (b *BridgeRuntime) CheckUpstream(cfg AppConfig) error {
+func (b *ProxyRuntime) CheckUpstream(cfg AppConfig) error {
 	resourceURL, err := upstreamResourceURL(cfg.DeepseekBaseURL, "models")
 	if err != nil {
 		return err
@@ -250,7 +250,7 @@ func (b *BridgeRuntime) CheckUpstream(cfg AppConfig) error {
 	return nil
 }
 
-func (b *BridgeRuntime) handleHealth(w http.ResponseWriter, _ *http.Request) {
+func (b *ProxyRuntime) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	b.writeJSON(w, http.StatusOK, map[string]any{
 		"status":         b.Status().Status,
 		"listen_address": b.Status().ListenAddress,
@@ -258,25 +258,25 @@ func (b *BridgeRuntime) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func (b *BridgeRuntime) handleRoot(w http.ResponseWriter, _ *http.Request) {
+func (b *ProxyRuntime) handleRoot(w http.ResponseWriter, _ *http.Request) {
 	b.writeJSON(w, http.StatusOK, map[string]any{
-		"name":   "Nettopo Codex Bridge",
+		"name":   "Nettopo Codex Proxy",
 		"status": b.Status(),
 		"endpoints": map[string]string{
 			"health":                    "/health",
 			"models":                    "/v1/models",
 			"chat_completions":          "/v1/chat/completions",
 			"responses":                 "/v1/responses",
-			"chat_completions_upstream": "DeepSeek /v1/chat/completions",
-		},
+			"messages":                  "/v1/messages",
+			},
 		"hint": "将本地地址填入 Codex Desktop 的端点；浏览器访问 /health 可检查服务状态。",
 	})
 }
 
-func (b *BridgeRuntime) handleModels(w http.ResponseWriter, r *http.Request) {
+func (b *ProxyRuntime) handleModels(w http.ResponseWriter, r *http.Request) {
 	cfg := b.snapshotConfig()
 	requestID := fmt.Sprintf("req_%d", time.Now().UnixNano())
-	w.Header().Set("x-bridge-request-id", requestID)
+	w.Header().Set("x-proxy-request-id", requestID)
 
 	seen := map[string]bool{}
 	ids := make([]string, 0, 8+len(cfg.Mappings))
@@ -329,11 +329,11 @@ func (b *BridgeRuntime) handleModels(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (b *BridgeRuntime) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
+func (b *ProxyRuntime) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	cfg := b.snapshotConfig()
 	requestID := fmt.Sprintf("req_%d", time.Now().UnixNano())
 	startedAt := time.Now()
-	w.Header().Set("x-bridge-request-id", requestID)
+	w.Header().Set("x-proxy-request-id", requestID)
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 4<<20))
 	if err != nil {
@@ -414,12 +414,12 @@ func (b *BridgeRuntime) handleChatCompletions(w http.ResponseWriter, r *http.Req
 	)
 }
 
-func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) {
+func (b *ProxyRuntime) handleResponses(w http.ResponseWriter, r *http.Request) {
 	cfg := b.snapshotConfig()
 	requestID := fmt.Sprintf("req_%d", time.Now().UnixNano())
 	startedAt := time.Now()
 	statusCode := 0
-	w.Header().Set("x-bridge-request-id", requestID)
+	w.Header().Set("x-proxy-request-id", requestID)
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 4<<20))
 	if err != nil {
@@ -629,7 +629,7 @@ func summarizeJSONKeys(body []byte) string {
 	return strings.Join(keys, ",")
 }
 
-func (b *BridgeRuntime) setLastReasoning(value string) {
+func (b *ProxyRuntime) setLastReasoning(value string) {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return
@@ -640,7 +640,7 @@ func (b *BridgeRuntime) setLastReasoning(value string) {
 	b.mu.Unlock()
 }
 
-func (b *BridgeRuntime) getLastReasoning() string {
+func (b *ProxyRuntime) getLastReasoning() string {
 	b.mu.RLock()
 	value := b.lastReasoning
 	at := b.lastReasonAt
@@ -657,7 +657,7 @@ func (b *BridgeRuntime) getLastReasoning() string {
 	return value
 }
 
-func (b *BridgeRuntime) setLastUpstreamFailure(status int, message string) {
+func (b *ProxyRuntime) setLastUpstreamFailure(status int, message string) {
 	b.mu.Lock()
 	b.lastUpstreamStatus = status
 	b.lastUpstreamError = strings.TrimSpace(message)
@@ -665,13 +665,13 @@ func (b *BridgeRuntime) setLastUpstreamFailure(status int, message string) {
 	b.mu.Unlock()
 }
 
-func (b *BridgeRuntime) getLastUpstreamFailure() (int, string, time.Time) {
+func (b *ProxyRuntime) getLastUpstreamFailure() (int, string, time.Time) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.lastUpstreamStatus, b.lastUpstreamError, b.lastUpstreamAt
 }
 
-func (b *BridgeRuntime) clearLastUpstreamFailure() {
+func (b *ProxyRuntime) clearLastUpstreamFailure() {
 	b.mu.Lock()
 	b.lastUpstreamStatus = 0
 	b.lastUpstreamError = ""
@@ -787,7 +787,7 @@ func injectReasoningIntoChatPayload(body []byte, reasoning string) ([]byte, bool
 	return out, true
 }
 
-func (b *BridgeRuntime) streamResponsesFailed(w http.ResponseWriter, errType string, message string) {
+func (b *ProxyRuntime) streamResponsesFailed(w http.ResponseWriter, errType string, message string) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		return
@@ -825,6 +825,387 @@ func truncateForLog(value string, max int) string {
 		return value
 	}
 	return value[:max] + "...(truncated)"
+}
+
+// handleMessages converts Anthropic Messages API (/v1/messages) to DeepSeek Chat Completions.
+func (b *ProxyRuntime) handleMessages(w http.ResponseWriter, r *http.Request) {
+	cfg := b.snapshotConfig()
+	requestID := fmt.Sprintf("req_%d", time.Now().UnixNano())
+	startedAt := time.Now()
+	w.Header().Set("x-proxy-request-id", requestID)
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, 4<<20))
+	if err != nil {
+		b.app.appendLog("error", "proxy", "messages 读取请求体失败", requestID)
+		b.writeProxyError(w, http.StatusBadRequest, "读取请求体失败")
+		return
+	}
+
+	chatBody, streaming, model, err := translateMessagesToChatCompletions(body, cfg)
+	if err != nil {
+		b.app.appendLog("warn", "proxy", "messages 请求体解析失败: "+err.Error()+" keys="+summarizeJSONKeys(body), requestID)
+		b.writeProxyError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	resourceURL, err := upstreamResourceURL(cfg.DeepseekBaseURL, "chat/completions")
+	if err != nil {
+		b.app.appendLog("error", "proxy", "messages 上游地址错误: "+err.Error(), requestID)
+		b.writeProxyError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+
+	if streaming {
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			b.writeProxyError(w, http.StatusBadGateway, "客户端不支持流式输出")
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.WriteHeader(http.StatusOK)
+		flusher.Flush()
+	}
+
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, resourceURL, bytes.NewReader(chatBody))
+	if err != nil {
+		b.app.appendLog("error", "proxy", "messages 构造上游请求失败: "+err.Error(), requestID)
+		if streaming {
+			b.streamMessagesError(w, "bad_gateway", err.Error())
+		} else {
+			b.writeProxyError(w, http.StatusBadGateway, err.Error())
+		}
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	copyRequestHeaders(req.Header, r.Header, cfg.Headers)
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(chatBody)), nil
+	}
+
+	resp, err := b.doUpstream(req, cfg, streaming)
+	if err != nil {
+		b.app.appendLog("error", "proxy", "转发失败: "+err.Error(), requestID)
+		if streaming {
+			b.streamMessagesError(w, "bad_gateway", err.Error())
+		} else {
+			b.writeProxyError(w, http.StatusBadGateway, err.Error())
+		}
+		return
+	}
+	defer resp.Body.Close()
+
+	atomic.AddInt64(&b.requestCount, 1)
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
+		msg := strings.TrimSpace(string(raw))
+		if msg == "" {
+			msg = fmt.Sprintf("上游返回 %d", resp.StatusCode)
+		} else {
+			msg = fmt.Sprintf("上游返回 %d: %s", resp.StatusCode, msg)
+		}
+		b.setLastUpstreamFailure(resp.StatusCode, msg)
+		if streaming {
+			b.streamMessagesError(w, "bad_gateway", msg)
+		} else {
+			b.writeProxyError(w, http.StatusBadGateway, msg)
+		}
+		b.app.appendLog("error", "proxy", fmt.Sprintf("POST /v1/messages -> %d (%dms) upstream_error=%s", resp.StatusCode, time.Since(startedAt).Milliseconds(), truncateForLog(msg, 2048)), requestID)
+		return
+	}
+
+	b.clearLastUpstreamFailure()
+
+	if streaming {
+		b.streamChatToMessages(w, resp.Body, model)
+	} else {
+		upstreamRaw, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
+		response, err := translateChatCompletionToMessages(upstreamRaw, model)
+		if err != nil {
+			b.app.appendLog("error", "proxy", "messages 响应转换失败: "+err.Error(), requestID)
+			b.writeProxyError(w, http.StatusInternalServerError, "响应转换失败")
+			return
+		}
+		b.writeJSON(w, http.StatusOK, response)
+	}
+
+	duration := time.Since(startedAt).Milliseconds()
+	b.app.appendLog("info", "proxy", fmt.Sprintf("POST /v1/messages -> 200 (%dms)", duration), requestID)
+}
+
+func (b *ProxyRuntime) streamMessagesError(w http.ResponseWriter, errType string, message string) {
+	data, _ := json.Marshal(map[string]any{
+		"type":  "error",
+		"error": map[string]string{"type": errType, "message": message},
+	})
+	fmt.Fprintf(w, "event: error\ndata: %s\n\n", data)
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// streamChatToMessages converts a Chat Completions SSE stream to Messages API SSE events.
+func (b *ProxyRuntime) streamChatToMessages(w http.ResponseWriter, body io.Reader, model string) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return
+	}
+
+	respID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
+	var contentText strings.Builder
+	var stopReason string
+	var outputTokens int
+
+	writeSSE := func(event string, data any) {
+		payload, _ := json.Marshal(data)
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, payload)
+		flusher.Flush()
+	}
+
+	hasStarted := false
+	reader := bufio.NewScanner(body)
+	reader.Buffer(make([]byte, 0, 64*1024), 2*1024*1024)
+	for reader.Scan() {
+		line := strings.TrimSpace(reader.Text())
+		if line == "" {
+			continue
+		}
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if data == "[DONE]" {
+			break
+		}
+
+		var chunk map[string]any
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			continue
+		}
+
+		choices, _ := chunk["choices"].([]any)
+		if len(choices) == 0 {
+			continue
+		}
+		first, _ := choices[0].(map[string]any)
+		if first == nil {
+			continue
+		}
+
+		delta, _ := first["delta"].(map[string]any)
+		if !hasStarted {
+			writeSSE("message_start", map[string]any{
+				"type": "message_start",
+				"message": map[string]any{
+					"id":      respID,
+					"type":    "message",
+					"role":    "assistant",
+					"content": []any{},
+					"model":   model,
+				},
+			})
+			writeSSE("content_block_start", map[string]any{
+				"type":          "content_block_start",
+				"index":         0,
+				"content_block": map[string]any{"type": "text", "text": ""},
+			})
+			hasStarted = true
+		}
+
+		if delta != nil {
+			if text, ok := delta["content"].(string); ok && text != "" {
+				contentText.WriteString(text)
+				writeSSE("content_block_delta", map[string]any{
+					"type":  "content_block_delta",
+					"index": 0,
+					"delta": map[string]any{"type": "text_delta", "text": text},
+				})
+			}
+		}
+
+		if fr, ok := first["finish_reason"].(string); ok && fr != "" {
+			stopReason = fr
+		}
+
+		if usage, ok := chunk["usage"].(map[string]any); ok {
+			if ct, ok := usage["completion_tokens"].(float64); ok {
+				outputTokens = int(ct)
+			}
+		}
+	}
+
+	if hasStarted {
+		writeSSE("content_block_stop", map[string]any{
+			"type":  "content_block_stop",
+			"index": 0,
+		})
+		mappedReason := mapFinishReason(stopReason)
+		writeSSE("message_delta", map[string]any{
+			"type":  "message_delta",
+			"delta": map[string]any{"stop_reason": mappedReason, "stop_sequence": nil},
+			"usage": map[string]any{"output_tokens": outputTokens},
+		})
+		writeSSE("message_stop", map[string]any{"type": "message_stop"})
+	}
+}
+
+func mapFinishReason(fr string) string {
+	switch fr {
+	case "stop":
+		return "end_turn"
+	case "length":
+		return "max_tokens"
+	case "tool_calls":
+		return "tool_use"
+	default:
+		return fr
+	}
+}
+
+// translateMessagesToChatCompletions converts an Anthropic Messages API request to Chat Completions.
+func translateMessagesToChatCompletions(body []byte, cfg AppConfig) ([]byte, bool, string, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, false, "", errors.New("请求体不是有效的 JSON")
+	}
+
+	streaming := false
+	if raw, ok := payload["stream"]; ok {
+		if b, ok := raw.(bool); ok {
+			streaming = b
+		}
+	}
+
+	model := strings.TrimSpace(cfg.DefaultModel)
+	if raw, ok := payload["model"].(string); ok && strings.TrimSpace(raw) != "" {
+		if mapped, ok := cfg.Mappings[raw]; ok && strings.TrimSpace(mapped) != "" {
+			model = mapped
+		} else {
+			model = raw
+		}
+	}
+	payload["model"] = model
+	messages, _ := payload["messages"].([]any)
+	if messages == nil {
+		messages = []any{}
+	}
+
+	// Move system field to a system message at the beginning
+	if sys, ok := payload["system"].(string); ok && strings.TrimSpace(sys) != "" {
+		systemMsg := map[string]any{"role": "system", "content": sys}
+		messages = append([]any{systemMsg}, messages...)
+	}
+	delete(payload, "system")
+	if sysArr, ok := payload["system"].([]any); ok {
+		var texts []string
+		for _, item := range sysArr {
+			if m, ok := item.(map[string]any); ok {
+				if t, ok := m["text"].(string); ok {
+					texts = append(texts, t)
+				}
+			}
+		}
+		if len(texts) > 0 {
+			systemMsg := map[string]any{"role": "system", "content": strings.Join(texts, "\n")}
+			messages = append([]any{systemMsg}, messages...)
+		}
+		delete(payload, "system")
+	}
+
+	// Convert Messages API content blocks to simple text
+	for i, item := range messages {
+		msg, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if content, ok := msg["content"].([]any); ok {
+			var texts []string
+			for _, block := range content {
+				if b, ok := block.(map[string]any); ok {
+					if t, ok := b["text"].(string); ok {
+						texts = append(texts, t)
+					}
+				}
+			}
+			if len(texts) > 0 {
+				msg["content"] = strings.Join(texts, "\n")
+			}
+		}
+		messages[i] = msg
+	}
+	payload["messages"] = messages
+
+	// Rename max_tokens (Messages API) — keep as-is for Chat Completions
+	if _, ok := payload["max_tokens"]; !ok {
+		payload["max_tokens"] = 4096
+	}
+
+	// Remove Messages-specific fields
+	delete(payload, "anthropic_version")
+	delete(payload, "thinking")
+
+	translatedBody, err := json.Marshal(payload)
+	if err != nil {
+		return nil, false, "", err
+	}
+	return translatedBody, streaming, model, nil
+}
+
+// translateChatCompletionToMessages converts a Chat Completions response to Messages API format.
+func translateChatCompletionToMessages(body []byte, model string) (map[string]any, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, err
+	}
+
+	respID := fmt.Sprintf("msg_%d", time.Now().UnixNano())
+	text := extractChatCompletionText(payload)
+	stopReason := ""
+	if choices, ok := payload["choices"].([]any); ok && len(choices) > 0 {
+		if first, ok := choices[0].(map[string]any); ok {
+			if fr, ok := first["finish_reason"].(string); ok {
+				stopReason = mapFinishReason(fr)
+			}
+		}
+	}
+
+	inputTokens := 0
+	outputTokens := 0
+	if usage, ok := payload["usage"].(map[string]any); ok {
+		if ct, ok := usage["completion_tokens"].(float64); ok {
+			outputTokens = int(ct)
+		}
+	}
+
+	content := []any{map[string]any{"type": "text", "text": text}}
+
+	// Check for tool calls
+	toolCalls := extractChatCompletionToolCalls(payload)
+	for _, tc := range toolCalls {
+		content = append(content, map[string]any{
+			"type":  "tool_use",
+			"id":    tc.ID,
+			"name":  tc.Name,
+			"input": tc.Arguments,
+		})
+	}
+
+	return map[string]any{
+		"id":      respID,
+		"type":    "message",
+		"role":    "assistant",
+		"content": content,
+		"model":   model,
+		"stop_reason":    stopReason,
+		"stop_sequence":  nil,
+		"usage": map[string]any{
+			"input_tokens":  inputTokens,
+			"output_tokens": outputTokens,
+		},
+	}, nil
 }
 
 func summarizeResponsesRequest(body []byte) string {
@@ -940,7 +1321,7 @@ func summarizeTools(value any) string {
 	return fmt.Sprintf("n=%d(%s)", len(toolsAny), strings.Join(names, ","))
 }
 
-func (b *BridgeRuntime) doUpstream(req *http.Request, cfg AppConfig, streaming bool) (*http.Response, error) {
+func (b *ProxyRuntime) doUpstream(req *http.Request, cfg AppConfig, streaming bool) (*http.Response, error) {
 	req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
 	if req.Header.Get("Accept") == "" && streaming {
 		req.Header.Set("Accept", "text/event-stream")
@@ -950,9 +1331,11 @@ func (b *BridgeRuntime) doUpstream(req *http.Request, cfg AppConfig, streaming b
 	}
 
 	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: nil,
-		},
+		Transport: func() *http.Transport {
+			tr := http.DefaultTransport.(*http.Transport).Clone()
+			tr.Proxy = nil
+			return tr
+		}(),
 		Timeout: time.Duration(cfg.RequestTimeoutMs) * time.Millisecond,
 	}
 	if streaming {
@@ -991,7 +1374,7 @@ func (b *BridgeRuntime) doUpstream(req *http.Request, cfg AppConfig, streaming b
 	return nil, lastErr
 }
 
-func (b *BridgeRuntime) streamResponse(w http.ResponseWriter, body io.Reader) {
+func (b *ProxyRuntime) streamResponse(w http.ResponseWriter, body io.Reader) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		_, _ = io.Copy(w, body)
@@ -1011,7 +1394,7 @@ func (b *BridgeRuntime) streamResponse(w http.ResponseWriter, body io.Reader) {
 	}
 }
 
-func (b *BridgeRuntime) streamChatToResponses(w http.ResponseWriter, body io.Reader, model string) (int, []string) {
+func (b *ProxyRuntime) streamChatToResponses(w http.ResponseWriter, body io.Reader, model string) (int, []string) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		_, _ = io.Copy(w, body)
@@ -1298,11 +1681,11 @@ func (b *BridgeRuntime) streamChatToResponses(w http.ResponseWriter, body io.Rea
 	return len(finalText), toolNames
 }
 
-func (b *BridgeRuntime) setStatus(status BridgeStatus, lastError string) {
+func (b *ProxyRuntime) setStatus(status ProxyStatus, lastError string) {
 	b.mu.Lock()
 	b.status = status
 	b.lastError = lastError
-	if status == BridgeStopped {
+	if status == ProxyStopped {
 		b.listenAddress = ""
 		b.startedAt = time.Time{}
 		atomic.StoreInt64(&b.requestCount, 0)
@@ -1314,33 +1697,33 @@ func (b *BridgeRuntime) setStatus(status BridgeStatus, lastError string) {
 	b.app.emitStatus()
 }
 
-func (b *BridgeRuntime) snapshotConfig() AppConfig {
+func (b *ProxyRuntime) snapshotConfig() AppConfig {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.config
 }
 
-func (b *BridgeRuntime) writeJSON(w http.ResponseWriter, statusCode int, payload any) {
+func (b *ProxyRuntime) writeJSON(w http.ResponseWriter, statusCode int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-func (b *BridgeRuntime) writeProxyError(w http.ResponseWriter, statusCode int, message string) {
-	code := "bridge_error"
+func (b *ProxyRuntime) writeProxyError(w http.ResponseWriter, statusCode int, message string) {
+	code := "proxy_error"
 	if statusCode == http.StatusBadGateway {
 		code = "bad_gateway"
 	}
 	b.writeJSON(w, statusCode, map[string]any{
 		"error": map[string]any{
 			"message": message,
-			"type":    "bridge_error",
+			"type":    "proxy_error",
 			"code":    code,
 		},
 	})
 }
 
-func (b *BridgeRuntime) copyHeaders(dst http.Header, src http.Header) {
+func (b *ProxyRuntime) copyHeaders(dst http.Header, src http.Header) {
 	for key, values := range src {
 		if strings.EqualFold(key, "Content-Length") {
 			continue

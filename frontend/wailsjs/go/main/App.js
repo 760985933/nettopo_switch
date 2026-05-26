@@ -30,10 +30,6 @@ export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
 
-export function GetBridgeStatus() {
-  return window['go']['main']['App']['GetBridgeStatus']();
-}
-
 export function GetCodexConfigPath() {
   return window['go']['main']['App']['GetCodexConfigPath']();
 }
@@ -44,6 +40,10 @@ export function GetLogHistory(arg1) {
 
 export function GetOverviewSnapshot() {
   return window['go']['main']['App']['GetOverviewSnapshot']();
+}
+
+export function GetProxyStatus() {
+  return window['go']['main']['App']['GetProxyStatus']();
 }
 
 export function ImportConfig(arg1) {
@@ -58,8 +58,8 @@ export function ReadCodexConfigToml() {
   return window['go']['main']['App']['ReadCodexConfigToml']();
 }
 
-export function RestartBridge() {
-  return window['go']['main']['App']['RestartBridge']();
+export function RestartProxy() {
+  return window['go']['main']['App']['RestartProxy']();
 }
 
 export function RestoreCodexConfigToml() {
@@ -78,12 +78,12 @@ export function SaveAppConfig(arg1) {
   return window['go']['main']['App']['SaveAppConfig'](arg1);
 }
 
-export function StartBridge() {
-  return window['go']['main']['App']['StartBridge']();
+export function StartProxy() {
+  return window['go']['main']['App']['StartProxy']();
 }
 
-export function StopBridge() {
-  return window['go']['main']['App']['StopBridge']();
+export function StopProxy() {
+  return window['go']['main']['App']['StopProxy']();
 }
 
 export function WriteCodexConfigToml() {

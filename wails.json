@@ -12,9 +12,9 @@
   },
   "info": {
     "companyName": "nettopo.com",
-    "productName": "Nettopo Codex Bridge",
+    "productName": "Nettopo Codex Proxy",
     "productVersion": "0.1.0",
-    "comments": "Codex Desktop 本地桥接服务（DeepSeek）",
+    "comments": "Codex Desktop 本地代理服务（DeepSeek）",
     "copyright": "© 2026 nettopo.com"
   }
 }
