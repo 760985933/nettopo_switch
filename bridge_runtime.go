@@ -392,6 +392,7 @@ func (b *BridgeRuntime) handleChatCompletions(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	b.clearLastUpstreamFailure()
 	b.copyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
 
@@ -521,6 +522,7 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
+		b.clearLastUpstreamFailure()
 		textLen, toolNames := b.streamChatToResponses(w, resp.Body, model)
 		duration := time.Since(startedAt).Milliseconds()
 		message := fmt.Sprintf("POST /v1/responses (stream) -> 200 (%dms)", duration)
@@ -570,6 +572,7 @@ func (b *BridgeRuntime) handleResponses(w http.ResponseWriter, r *http.Request) 
 			w.WriteHeader(resp.StatusCode)
 			_, _ = w.Write(upstreamRaw)
 		} else {
+			b.clearLastUpstreamFailure()
 			if reasoning := strings.TrimSpace(extractChatCompletionReasoningFromBody(upstreamRaw)); reasoning != "" {
 				b.setLastReasoning(reasoning)
 			}
@@ -663,6 +666,14 @@ func (b *BridgeRuntime) getLastUpstreamFailure() (int, string, time.Time) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.lastUpstreamStatus, b.lastUpstreamError, b.lastUpstreamAt
+}
+
+func (b *BridgeRuntime) clearLastUpstreamFailure() {
+	b.mu.Lock()
+	b.lastUpstreamStatus = 0
+	b.lastUpstreamError = ""
+	b.lastUpstreamAt = time.Time{}
+	b.mu.Unlock()
 }
 
 func injectReasoningIntoChatPayload(body []byte, reasoning string) ([]byte, bool) {
