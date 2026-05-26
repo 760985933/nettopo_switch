@@ -17,21 +17,21 @@ jobs:
             artifact_name: nettopo-switch-darwin-arm64
             source_path: build/bin/nettopo-switch-darwin-arm64.app
             artifact_path: build/bin/nettopo-switch-darwin-arm64.zip
-          # - os: macos-15-intel
-          #   platform: darwin/amd64
-          #   artifact_name: nettopo-switch-darwin-amd64
-          #   source_path: build/bin/nettopo-switch-darwin-amd64.app
-          #   artifact_path: build/bin/nettopo-switch-darwin-amd64.zip
+          - os: macos-15-intel
+            platform: darwin/amd64
+            artifact_name: nettopo-switch-darwin-amd64
+            source_path: build/bin/nettopo-switch-darwin-amd64.app
+            artifact_path: build/bin/nettopo-switch-darwin-amd64.zip
           - os: windows-latest
             platform: windows/amd64
             artifact_name: nettopo-switch-windows-amd64
             source_path: build/bin/nettopo-switch-windows-amd64.exe
             artifact_path: build/bin/nettopo-switch-windows-amd64.zip
-          # - os: windows-latest
-          #   platform: windows/arm64
-          #   artifact_name: nettopo-switch-windows-arm64
-          #   source_path: build/bin/nettopo-switch-windows-arm64.exe
-          #   artifact_path: build/bin/nettopo-switch-windows-arm64.zip
+          - os: windows-latest
+            platform: windows/arm64
+            artifact_name: nettopo-switch-windows-arm64
+            source_path: build/bin/nettopo-switch-windows-arm64.exe
+            artifact_path: build/bin/nettopo-switch-windows-arm64.zip
     runs-on: ${{ matrix.os }}
 
     steps:
