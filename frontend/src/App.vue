@@ -281,7 +281,6 @@ onMounted(async () => {
                 :options="localeOptions"
                 @update:value="(value: string) => ui.setLocale(value)"
               />
-              <n-button secondary @click="ui.showSettings = true">{{ t('app.actions.preferences') }}</n-button>
             </div>
           </header>
 
@@ -306,9 +305,11 @@ onMounted(async () => {
 <style scoped>
 .shell {
   display: grid;
-  min-height: 100vh;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
   padding: 20px;
   gap: 18px;
+  overflow: hidden;
   scrollbar-gutter: stable;
 }
 
@@ -445,6 +446,8 @@ onMounted(async () => {
 
 .content {
   min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
 }
 
 @media (max-width: 1024px) {

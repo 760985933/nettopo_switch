@@ -214,16 +214,8 @@ async function handleCodexWrite() {
         <div class="step-body">
           <div class="actions">
             <n-button type="primary" @click="handleCodexWrite">{{ t('guide.actions.writeFile') }}</n-button>
-            <n-button secondary @click="ui.showSettings = true">{{ t('guide.actions.openPreferences') }}</n-button>
+            <n-button secondary @click="ui.showSettings = true">{{ t('guide.actions.preferences') }}</n-button>
             <n-button tertiary @click="handleRestoreCodex">{{ t('guide.actions.restoreDefault') }}</n-button>
-          </div>
-          <div class="kv">
-            <span>{{ t('guide.step.two.baseUrl') }}</span>
-            <strong class="mono">{{ codexBaseURL || t('guide.step.two.baseUrlAuto') }}</strong>
-          </div>
-          <div class="kv">
-            <span>{{ t('guide.step.two.apiKey') }}</span>
-            <strong class="mono">{{ t('guide.step.two.apiKeyNone') }}</strong>
           </div>
         </div>
       </div>

@@ -191,7 +191,7 @@ export const messages = {
     },
     guide: {
       title: '接入指引',
-      actions: { copyBaseUrl: '复制 Base URL', openPreferences: '打开偏好设置', writeFile: '写入文件', restoreDefault: '恢复默认' },
+      actions: { copyBaseUrl: '复制 Base URL', preferences:'偏好设置', writeFile: '写入文件', restoreDefault: '恢复默认' },
       step: {
         one: {
           title: '启动代理服务',
@@ -211,7 +211,7 @@ export const messages = {
         three: {
           title: '验证与排障',
           healthCheck: '健康检查',
-          hint: '点击右侧“健康检查”，并观察控制台最近日志；异常时优先确认端口占用、Key、上游可达性。',
+          hint: '点击“健康检查”，并观察控制台最近日志；异常时优先确认端口占用、Key、上游可达性。',
           quickVerify: '快速验证',
         },
       },
@@ -375,7 +375,7 @@ export const messages = {
     },
     guide: {
       title: 'Quick Start',
-      actions: { copyBaseUrl: 'Copy Base URL', openPreferences: 'Open preferences', writeFile: 'Write File', restoreDefault: 'Restore default' },
+      actions: { copyBaseUrl: 'Copy Base URL', preferences:'Preferences', writeFile: 'Write File', restoreDefault: 'Restore default' },
       step: {
         one: {
           title: 'Start the proxy',
@@ -546,7 +546,7 @@ export const messages = {
     },
     guide: {
       title: '接続ガイド',
-      actions: { copyBaseUrl: 'Base URL をコピー', openPreferences: '設定を開く', writeFile: 'ファイルに書き込み', restoreDefault: '既定に戻す' },
+      actions: { copyBaseUrl: 'Base URL をコピー', preferences:'設定', writeFile: 'ファイルに書き込み', restoreDefault: '既定に戻す' },
       step: {
         one: {
           title: 'ブリッジを起動',
@@ -704,7 +704,7 @@ export const messages = {
     },
     guide: {
       title: '빠른 시작',
-      actions: { copyBaseUrl: 'Base URL 복사', openPreferences: '설정 열기', writeFile: '파일에 쓰기', restoreDefault: '기본 복원' },
+      actions: { copyBaseUrl: 'Base URL 복사', preferences:'설정', writeFile: '파일에 쓰기', restoreDefault: '기본 복원' },
       step: {
         one: {
           title: '브리지 시작',
@@ -862,7 +862,7 @@ export const messages = {
     },
     guide: {
       title: 'Guide',
-      actions: { copyBaseUrl: 'Copier Base URL', openPreferences: 'Ouvrir préférences', writeFile: 'Écrire le fichier', restoreDefault: 'Restaurer défaut' },
+      actions: { copyBaseUrl: 'Copier Base URL', preferences:'Préférences', writeFile: 'Écrire le fichier', restoreDefault: 'Restaurer défaut' },
       step: {
         one: {
           title: 'Démarrer le proxy',
@@ -1020,7 +1020,7 @@ export const messages = {
     },
     guide: {
       title: 'Anleitung',
-      actions: { copyBaseUrl: 'Base URL kopieren', openPreferences: 'Einstellungen öffnen', writeFile: 'Datei schreiben', restoreDefault: 'Standard wiederherstellen' },
+      actions: { copyBaseUrl: 'Base URL kopieren', preferences:'Einstellungen', writeFile: 'Datei schreiben', restoreDefault: 'Standard wiederherstellen' },
       step: {
         one: { title: 'Proxy starten', notRunning: 'Gestoppt (links "Starten" klicken)', hint: 'Nach dem Start wird lokal /v1 für Codex bereitgestellt.' },
         two: {
@@ -1174,7 +1174,7 @@ export const messages = {
     },
     guide: {
       title: 'Guía',
-      actions: { copyBaseUrl: 'Copiar Base URL', openPreferences: 'Abrir preferencias', writeFile: 'Escribir archivo', restoreDefault: 'Restaurar por defecto' },
+      actions: { copyBaseUrl: 'Copiar Base URL', preferences:'Preferencias', writeFile: 'Escribir archivo', restoreDefault: 'Restaurar por defecto' },
       step: {
         one: { title: 'Inicia el proxy', notRunning: 'Detenido (pulsa "Iniciar" a la izquierda)', hint: 'Tras iniciar, expone /v1 local para Codex.' },
         two: {
