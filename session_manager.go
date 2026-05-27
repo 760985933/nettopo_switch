@@ -588,6 +588,40 @@ func (a *App) RestoreCodexSessions(backupPath string) (*MigrationResult, error) 
 	return result, nil
 }
 
+// DeleteCodexSessionBackup 删除指定的会话备份文件
+func (a *App) DeleteCodexSessionBackup(backupPath string) (string, error) {
+	absBackup := backupPath
+	if _, err := os.Stat(absBackup); err != nil {
+		return "", fmt.Errorf("备份文件不存在: %s", backupPath)
+	}
+	if err := os.Remove(absBackup); err != nil {
+		return "", err
+	}
+	return absBackup, nil
+}
+
+// ListCodexSessionProviders 返回所有会话中不同的 model_provider 列表
+func (a *App) ListCodexSessionProviders() ([]string, error) {
+	sessions, err := a.ListCodexSessions()
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]struct{})
+	providers := make([]string, 0)
+	for _, s := range sessions {
+		if s.ModelProvider == "" {
+			continue
+		}
+		if _, ok := seen[s.ModelProvider]; ok {
+			continue
+		}
+		seen[s.ModelProvider] = struct{}{}
+		providers = append(providers, s.ModelProvider)
+	}
+	sort.Strings(providers)
+	return providers, nil
+}
+
 // ---------- migration internals ----------
 
 func migrateJSONLFiles(from, to string) (int, error) {

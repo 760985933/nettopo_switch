@@ -18,6 +18,10 @@ export function DeleteCodexConfigBackup(arg1) {
   return window['go']['main']['App']['DeleteCodexConfigBackup'](arg1);
 }
 
+export function DeleteCodexSessionBackup(arg1) {
+  return window['go']['main']['App']['DeleteCodexSessionBackup'](arg1);
+}
+
 export function ExportConfig() {
   return window['go']['main']['App']['ExportConfig']();
 }
@@ -76,6 +80,10 @@ export function ListCodexConfigBackups() {
 
 export function ListCodexSessionBackups() {
   return window['go']['main']['App']['ListCodexSessionBackups']();
+}
+
+export function ListCodexSessionProviders() {
+  return window['go']['main']['App']['ListCodexSessionProviders']();
 }
 
 export function ListCodexSessions() {

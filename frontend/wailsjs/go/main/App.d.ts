@@ -10,6 +10,8 @@ export function CountLegacySessions():Promise<number>;
 
 export function DeleteCodexConfigBackup(arg1:string):Promise<string>;
 
+export function DeleteCodexSessionBackup(arg1:string):Promise<string>;
+
 export function ExportConfig():Promise<string>;
 
 export function GenerateCodexConfigToml():Promise<string>;
@@ -39,6 +41,8 @@ export function ImportConfig(arg1:string):Promise<main.AppConfig>;
 export function ListCodexConfigBackups():Promise<Array<string>>;
 
 export function ListCodexSessionBackups():Promise<Array<string>>;
+
+export function ListCodexSessionProviders():Promise<Array<string>>;
 
 export function ListCodexSessions():Promise<Array<main.CodexSession>>;
 
