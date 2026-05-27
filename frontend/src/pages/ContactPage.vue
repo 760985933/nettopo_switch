@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
 import contactImg from '../assets/images/contact.png'
 import wxImg from '../assets/images/wx.png'
 import zfbImg from '../assets/images/zfb.png'
 
 const { t } = useI18n()
+
+const sponsors = [
+  { name: 'NetTopo专业网络运维软件', url: 'https://www.nettopo.com' },
+  { name: 'AAA专业批发空气小李', url: '' },
+]
 </script>
 
 <template>
@@ -35,6 +41,16 @@ const { t } = useI18n()
             <img :src="zfbImg" alt="Alipay" class="sponsor-img" />
             <span class="sponsor-label">{{ t('contact.zfbLabel') }}</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card sponsor-list-card">
+      <h4 class="card-title">{{ t('contact.sponsorList') }}</h4>
+      <div class="sponsor-list">
+        <div v-for="s in sponsors" :key="s.name" class="sponsor-row">
+          <span class="sponsor-name">{{ s.name }}</span>
+          <a class="sponsor-url" @click="BrowserOpenURL(s.url)">{{ s.url }}</a>
         </div>
       </div>
     </div>
@@ -92,11 +108,15 @@ const { t } = useI18n()
 .img-wrap {
   display: flex;
   justify-content: center;
+  max-width: 300px;
+  margin: 0 auto;
 }
 
 .contact-img {
-  max-width: 100%;
+  width: 100%;
   height: auto;
+  max-width: 100%;
+  object-fit: contain;
   border-radius: 12px;
 }
 
@@ -121,6 +141,43 @@ const { t } = useI18n()
 .sponsor-label {
   font-size: 12px;
   color: var(--muted);
+}
+
+.sponsor-list-card {
+  display: grid;
+  gap: 12px;
+}
+
+.sponsor-list {
+  display: grid;
+  gap: 10px;
+}
+
+.sponsor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.sponsor-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sponsor-url {
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.sponsor-url:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 720px) {
