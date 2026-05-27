@@ -187,6 +187,7 @@ export const useAppStore = defineStore('app', {
         : { ...makeDefaultProfile(id, name) }
       const updated = {
         ...this.config,
+        currentProfileId: id,
         profiles: {
           ...this.config.profiles,
           [id]: profile,
