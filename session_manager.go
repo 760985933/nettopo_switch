@@ -24,6 +24,7 @@ type CodexSession struct {
 	MessageCount  int    `json:"messageCount"`
 	CreatedAt     string `json:"createdAt"`
 	IsArchived    bool   `json:"isArchived"`
+	CWD           string `json:"cwd"`
 	filePath      string `json:"-"`
 }
 
@@ -77,6 +78,7 @@ type codexMetaPayload struct {
 	ID            string `json:"id"`
 	Timestamp     string `json:"timestamp"`
 	ModelProvider string `json:"model_provider"`
+	CWD           string `json:"cwd"`
 }
 
 // codexLine 是 JSONL 中后续行的通用结构
@@ -210,6 +212,7 @@ func parseSessionFile(path string) (*CodexSession, []SessionMessage, error) {
 		MessageCount:  len(messages),
 		CreatedAt:     payload.Timestamp,
 		IsArchived:    strings.Contains(path, "archived"),
+		CWD:           payload.CWD,
 		filePath:      path,
 	}
 
@@ -620,6 +623,105 @@ func (a *App) ListCodexSessionProviders() ([]string, error) {
 	}
 	sort.Strings(providers)
 	return providers, nil
+}
+
+// findSessionFile 在 sessions 和 archived_sessions 目录中按 ID 查找文件路径
+func (a *App) findSessionFile(id string) (string, bool, error) {
+	// 在 sessions 目录递归查找
+	if dir, err := codexSessionsDir(); err == nil {
+		var found string
+		_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".jsonl") {
+				return nil
+			}
+			if strings.Contains(info.Name(), id) {
+				found = path
+				return filepath.SkipDir
+			}
+			return nil
+		})
+		if found != "" {
+			return found, false, nil
+		}
+	}
+
+	// 在 archived_sessions 目录查找
+	if dir, err := codexArchivedSessionsDir(); err == nil {
+		entries, err := os.ReadDir(dir)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") {
+					continue
+				}
+				if strings.Contains(entry.Name(), id) {
+					return filepath.Join(dir, entry.Name()), true, nil
+				}
+			}
+		}
+	}
+
+	return "", false, fmt.Errorf("未找到会话: %s", id)
+}
+
+// DeleteCodexSession 永久删除指定会话文件
+func (a *App) DeleteCodexSession(id string) error {
+	path, _, err := a.findSessionFile(id)
+	if err != nil {
+		return err
+	}
+	return os.Remove(path)
+}
+
+// ArchiveCodexSession 将会话移入归档（或从归档移回）
+func (a *App) ArchiveCodexSession(id string) (*CodexSession, error) {
+	path, isArchived, err := a.findSessionFile(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if isArchived {
+		// 从 archived_sessions 移回 sessions
+		destDir, err := codexSessionsDir()
+		if err != nil {
+			return nil, err
+		}
+		today := time.Now().Format("2006/01/02")
+		destDir = filepath.Join(destDir, today)
+		if err := os.MkdirAll(destDir, 0o755); err != nil {
+			return nil, err
+		}
+		dest := filepath.Join(destDir, filepath.Base(path))
+		if err := os.Rename(path, dest); err != nil {
+			return nil, err
+		}
+		// 重新解析新路径
+		session, _, err := parseSessionFile(dest)
+		if err != nil {
+			return nil, err
+		}
+		session.IsArchived = false
+		return session, nil
+	}
+
+	// 移入 archived_sessions
+	destDir, err := codexArchivedSessionsDir()
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		return nil, err
+	}
+	dest := filepath.Join(destDir, filepath.Base(path))
+	if err := os.Rename(path, dest); err != nil {
+		return nil, err
+	}
+	// 重新解析新路径
+	session, _, err := parseSessionFile(dest)
+	if err != nil {
+		return nil, err
+	}
+	session.IsArchived = true
+	return session, nil
 }
 
 // ---------- migration internals ----------

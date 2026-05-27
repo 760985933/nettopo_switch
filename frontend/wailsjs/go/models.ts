@@ -98,6 +98,7 @@ export namespace main {
 	    messageCount: number;
 	    createdAt: string;
 	    isArchived: boolean;
+	    cwd: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new CodexSession(source);
@@ -112,6 +113,7 @@ export namespace main {
 	        this.messageCount = source["messageCount"];
 	        this.createdAt = source["createdAt"];
 	        this.isArchived = source["isArchived"];
+	    this.cwd = source["cwd"];
 	    }
 	}
 	export class HealthCheckItem {
