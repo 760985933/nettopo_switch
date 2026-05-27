@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
 import { useUiStore } from '../stores/ui'
-import type { Profile, ProxyStatusPayload, HealthCheckResult } from '../types'
+import { GetUsageBalance } from '../../wailsjs/go/main/App'
+import type { Profile, ProxyStatusPayload, HealthCheckResult, UsageBalance } from '../types'
 
 const emit = defineEmits<{
   copy: [value: string]
@@ -178,6 +179,31 @@ watch(showSandbox, (v) => {
   if (v) loadSandboxConfig()
 })
 
+// ── Usage balance ──
+const usageBalance = ref<UsageBalance | null>(null)
+let usageTimer: ReturnType<typeof setInterval> | null = null
+
+async function fetchUsageBalance() {
+  if (!store.currentProfile?.apiKey) {
+    usageBalance.value = null
+    return
+  }
+  try {
+    usageBalance.value = await GetUsageBalance()
+  } catch (err) {
+    usageBalance.value = { availableBalance: '', totalBalance: '', isDepleted: false, error: String(err) }
+  }
+}
+
+onMounted(() => {
+  fetchUsageBalance()
+  usageTimer = setInterval(fetchUsageBalance, 60000)
+})
+
+onBeforeUnmount(() => {
+  if (usageTimer) clearInterval(usageTimer)
+})
+
 async function handleCodexWrite() {
   try {
     const path = await store.writeCodexConfigToml()
@@ -269,6 +295,28 @@ async function handleCodexWrite() {
             <span class="mono url">{{ store.currentProfile.baseURL }}</span>
           </div>
           <div class="hint">{{ t('guide.step.one.hint') }}</div>
+
+          <!-- Usage balance -->
+          <div v-if="usageBalance && !usageBalance.error" class="usage-section">
+            <div class="usage-title">{{ t('guide.usage.title') }}</div>
+            <div class="usage-rows">
+              <div class="usage-row">
+                <span class="usage-label">{{ t('guide.usage.available') }}:</span>
+                <span class="usage-value">{{ usageBalance.availableBalance }}</span>
+              </div>
+              <div class="usage-row">
+                <span class="usage-label">{{ t('guide.usage.total') }}:</span>
+                <span class="usage-value">{{ usageBalance.totalBalance }}</span>
+              </div>
+            </div>
+            <div v-if="usageBalance.isDepleted" class="usage-depleted">
+              {{ t('guide.usage.depleted') }}
+            </div>
+          </div>
+          <div v-else-if="usageBalance && usageBalance.error" class="usage-section usage-section--error">
+            <div class="usage-title">{{ t('guide.usage.title') }}</div>
+            <div class="usage-error">{{ usageBalance.error }}</div>
+          </div>
         </div>
       </div>
 
@@ -703,6 +751,56 @@ async function handleCodexWrite() {
   line-height: 1.5;
   color: rgba(11, 18, 32, 0.72);
   word-break: break-word;
+}
+
+/* ── Usage balance ── */
+.usage-section {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.usage-section--error {
+  opacity: 0.7;
+}
+.usage-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.usage-rows {
+  display: grid;
+  gap: 3px;
+}
+.usage-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.usage-label {
+  color: var(--muted);
+}
+.usage-value {
+  font-weight: 600;
+  color: rgba(11, 18, 32, 0.9);
+}
+.usage-depleted {
+  color: rgba(212, 56, 13, 0.92);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(212, 56, 13, 0.08);
+}
+.usage-error {
+  color: var(--muted);
+  word-break: break-word;
+  font-size: 11px;
 }
 
 /* ── Sandbox ── */

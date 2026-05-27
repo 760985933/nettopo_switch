@@ -24,6 +24,8 @@ export function GetOverviewSnapshot():Promise<main.OverviewSnapshot>;
 
 export function GetProxyStatus():Promise<main.ProxyStatusPayload>;
 
+export function GetUsageBalance():Promise<main.UsageBalance>;
+
 export function GetSandboxConfig():Promise<main.SandboxWorkspaceConfig>;
 
 export function ImportConfig(arg1:string):Promise<main.AppConfig>;

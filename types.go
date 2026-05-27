@@ -93,3 +93,10 @@ type SandboxWorkspaceConfig struct {
 	SandboxMode    string `json:"sandboxMode" toml:"sandbox_mode"`
 	ApprovalPolicy string `json:"approvalPolicy" toml:"approval_policy"`
 }
+
+type UsageBalance struct {
+	AvailableBalance string `json:"availableBalance"`
+	TotalBalance     string `json:"totalBalance"`
+	IsDepleted       bool   `json:"isDepleted"`
+	Error            string `json:"error,omitempty"`
+}

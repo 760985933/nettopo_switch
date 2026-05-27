@@ -479,6 +479,66 @@ func (a *App) RunHealthCheck() (HealthCheckResult, error) {
 	return result, nil
 }
 
+func (a *App) GetUsageBalance() UsageBalance {
+	cfg, err := a.GetAppConfig()
+	if err != nil {
+		return UsageBalance{Error: err.Error()}
+	}
+
+	profile, ok := cfg.Profiles[cfg.CurrentProfileID]
+	if !ok {
+		return UsageBalance{Error: "当前配置不存在"}
+	}
+
+	if strings.TrimSpace(profile.APIKey) == "" {
+		return UsageBalance{Error: "API Key 未配置"}
+	}
+
+	baseURL := strings.TrimRight(profile.BaseURL, "/")
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return UsageBalance{Error: "Base URL 格式错误"}
+	}
+
+	// Build balance URL from scheme + host (strip path like /v1)
+	balanceURL := fmt.Sprintf("%s://%s/user/balance", parsed.Scheme, parsed.Host)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest(http.MethodGet, balanceURL, nil)
+	if err != nil {
+		return UsageBalance{Error: err.Error()}
+	}
+	req.Header.Set("Authorization", "Bearer "+profile.APIKey)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return UsageBalance{Error: err.Error()}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return UsageBalance{Error: fmt.Sprintf("API 返回状态 %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))}
+	}
+
+	var balanceResp struct {
+		IsAvailable      bool   `json:"is_available"`
+		AvailableBalance string `json:"available_balance"`
+		TotalBalance     string `json:"total_balance"`
+		IsDepleted       bool   `json:"is_depleted"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&balanceResp); err != nil {
+		return UsageBalance{Error: "解析响应失败: " + err.Error()}
+	}
+
+	return UsageBalance{
+		AvailableBalance: balanceResp.AvailableBalance,
+		TotalBalance:     balanceResp.TotalBalance,
+		IsDepleted:       balanceResp.IsDepleted,
+	}
+}
+
 func (a *App) GetLogHistory(limit int) []LogEntry {
 	a.logsMu.RLock()
 	defer a.logsMu.RUnlock()

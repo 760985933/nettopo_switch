@@ -245,11 +245,11 @@ export namespace main {
 	    downloadUrl: string;
 	    notes: string;
 	    checkedAt: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new UpdateCheckResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.currentVersion = source["currentVersion"];
@@ -258,6 +258,24 @@ export namespace main {
 	        this.downloadUrl = source["downloadUrl"];
 	        this.notes = source["notes"];
 	        this.checkedAt = source["checkedAt"];
+	    }
+	}
+	export class UsageBalance {
+	    availableBalance: string;
+	    totalBalance: string;
+	    isDepleted: boolean;
+	    error?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new UsageBalance(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.availableBalance = source["availableBalance"];
+	        this.totalBalance = source["totalBalance"];
+	        this.isDepleted = source["isDepleted"];
+	        this.error = source["error"];
 	    }
 	}
 

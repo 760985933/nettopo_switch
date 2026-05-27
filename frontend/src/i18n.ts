@@ -209,6 +209,12 @@ export const messages = {
         },
         configHint: '配置已更新，请重新写入 config.toml 并重启 Codex 以生效',
       },
+      usage: {
+        title: 'API 用量',
+        available: '可用余额',
+        total: '总余额',
+        depleted: '余额已用尽，请及时充值',
+      },
       step: {
         one: {
           title: '启动代理服务',
@@ -420,6 +426,12 @@ export const messages = {
         },
         configHint: 'Config updated. Please re-write config.toml and restart Codex.',
       },
+      usage: {
+        title: 'API Usage',
+        available: 'Available',
+        total: 'Total',
+        depleted: 'Balance depleted, please top up',
+      },
       step: {
         one: {
           title: 'Start the proxy',
@@ -618,6 +630,12 @@ export const messages = {
         },
         configHint: '設定が更新されました。config.toml を再書き込みして Codex を再起動してください。',
       },
+      usage: {
+        title: 'API 使用量',
+        available: '利用可能残高',
+        total: '総残高',
+        depleted: '残高が不足しています。チャージしてください',
+      },
       step: {
         one: {
           title: 'ブリッジを起動',
@@ -802,6 +820,12 @@ export const messages = {
           never: '하지 않음',
         },
         configHint: '설정이 업데이트되었습니다. config.toml을 다시 쓰고 Codex를 다시 시작하세요.',
+      },
+      usage: {
+        title: 'API 사용량',
+        available: '사용 가능 잔액',
+        total: '총 잔액',
+        depleted: '잔액이 부족합니다. 충전해주세요',
       },
       step: {
         one: {
@@ -988,6 +1012,12 @@ export const messages = {
         },
         configHint: 'Configuration mise à jour. Veuillez réécrire config.toml et redémarrer Codex.',
       },
+      usage: {
+        title: 'Utilisation API',
+        available: 'Solde disponible',
+        total: 'Solde total',
+        depleted: 'Solde épuisé, veuillez recharger',
+      },
       step: {
         one: {
           title: 'Démarrer le proxy',
@@ -1173,6 +1203,12 @@ export const messages = {
         },
         configHint: 'Konfiguration aktualisiert. Bitte config.toml neu schreiben und Codex neu starten.',
       },
+      usage: {
+        title: 'API-Nutzung',
+        available: 'Verfügbar',
+        total: 'Gesamt',
+        depleted: 'Guthaben aufgebraucht, bitte aufladen',
+      },
       step: {
         one: { title: 'Proxy starten', notRunning: 'Gestoppt (links "Starten" klicken)', hint: 'Nach dem Start wird lokal /v1 für Codex bereitgestellt.' },
         two: {
@@ -1353,6 +1389,12 @@ export const messages = {
           never: 'Nunca',
         },
         configHint: 'Configuración actualizada. Vuelva a escribir config.toml y reinicie Codex.',
+      },
+      usage: {
+        title: 'Uso de API',
+        available: 'Saldo disponible',
+        total: 'Saldo total',
+        depleted: 'Saldo agotado, por favor recargue',
       },
       step: {
         one: { title: 'Inicia el proxy', notRunning: 'Detenido (pulsa "Iniciar" a la izquierda)', hint: 'Tras iniciar, expone /v1 local para Codex.' },

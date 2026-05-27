@@ -74,3 +74,10 @@ export interface SandboxWorkspaceConfig {
   sandboxMode: string
   approvalPolicy: string
 }
+
+export interface UsageBalance {
+  availableBalance: string
+  totalBalance: string
+  isDepleted: boolean
+  error?: string
+}

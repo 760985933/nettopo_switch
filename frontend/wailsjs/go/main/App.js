@@ -46,6 +46,10 @@ export function GetProxyStatus() {
   return window['go']['main']['App']['GetProxyStatus']();
 }
 
+export function GetUsageBalance() {
+  return window['go']['main']['App']['GetUsageBalance']();
+}
+
 export function GetSandboxConfig() {
   return window['go']['main']['App']['GetSandboxConfig']();
 }
