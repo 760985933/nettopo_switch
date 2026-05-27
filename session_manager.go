@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -72,8 +73,8 @@ func codexArchivedSessionsDir() (string, error) {
 
 // codexSessionMeta 是 JSONL 中 type="session_meta" 行的结构
 type codexSessionMeta struct {
-	Type    string              `json:"type"`
-	Payload *codexMetaPayload   `json:"payload"`
+	Type    string            `json:"type"`
+	Payload *codexMetaPayload `json:"payload"`
 }
 
 type codexMetaPayload struct {
@@ -249,6 +250,7 @@ func extractPartsText(raw json.RawMessage) string {
 	}
 	return b.String()
 }
+
 // ---------- Wails bindings ----------
 
 // loadModelMap 从 SQLite state_*.sqlite 中查询所有线程的 model 名称
@@ -283,6 +285,9 @@ func loadModelMap() map[string]string {
 			if err := rows.Scan(&id, &model); err == nil && model != "" {
 				modelMap[id] = model
 			}
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("读取会话模型数据失败: %v", err)
 		}
 		rows.Close()
 		db.Close()
@@ -410,6 +415,7 @@ func (a *App) GetCodexSessionContent(id string) (*SessionDetail, error) {
 
 	return nil, fmt.Errorf("未找到会话: %s", id)
 }
+
 // HasLegacySessions 检查是否存在 model_provider = "Local" 的旧会话
 func (a *App) HasLegacySessions() (bool, error) {
 	sessions, err := a.ListCodexSessions()
