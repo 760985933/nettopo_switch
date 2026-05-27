@@ -213,8 +213,8 @@ async function handleCodexWrite() {
         </div>
         <div class="step-body">
           <div class="actions">
+            <n-button type="primary" @click="handleCodexWrite">{{ t('guide.actions.writeFile') }}</n-button>
             <n-button secondary @click="ui.showSettings = true">{{ t('guide.actions.openPreferences') }}</n-button>
-            <n-button secondary @click="handleCodexWrite">{{ t('guide.actions.writeFile') }}</n-button>
             <n-button tertiary @click="handleRestoreCodex">{{ t('guide.actions.restoreDefault') }}</n-button>
           </div>
           <div class="kv">
@@ -225,7 +225,6 @@ async function handleCodexWrite() {
             <span>{{ t('guide.step.two.apiKey') }}</span>
             <strong class="mono">{{ t('guide.step.two.apiKeyNone') }}</strong>
           </div>
-          <div class="hint">{{ t('guide.step.two.hint') }}</div>
         </div>
       </div>
 
@@ -242,20 +241,20 @@ async function handleCodexWrite() {
             <span>{{ statusLabel }}</span>
           </div>
 
-          <!-- Meta grid -->
-          <div class="s-grid">
-            <div class="s-item">
-              <span>{{ t('console.meta.listenAddress') }}</span>
+          <!-- Meta row -->
+          <div class="s-meta">
+            <span class="s-meta-item">
+              <span class="s-meta-label">{{ t('console.meta.listenAddress') }}:</span>
               <strong>{{ status.listenAddress || t('console.meta.notRunning') }}</strong>
-            </div>
-            <div class="s-item">
-              <span>{{ t('console.meta.requestCount') }}</span>
+            </span>
+            <span class="s-meta-item">
+              <span class="s-meta-label">{{ t('console.meta.requestCount') }}:</span>
               <strong>{{ status.requestCount }}</strong>
-            </div>
-            <div v-if="status.lastError" class="s-item" data-tone="error">
-              <span>{{ t('console.meta.lastError') }}</span>
+            </span>
+            <span v-if="status.lastError" class="s-meta-item" data-tone="error">
+              <span class="s-meta-label">{{ t('console.meta.lastError') }}:</span>
               <strong>{{ status.lastError }}</strong>
-            </div>
+            </span>
           </div>
 
           <!-- Health result -->
@@ -489,35 +488,27 @@ async function handleCodexWrite() {
   box-shadow: 0 0 0 4px rgba(212, 56, 13, 0.16);
 }
 
-.s-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.s-item {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.82);
-}
-.s-item span {
+.s-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
   font-size: 12px;
-  color: var(--muted);
 }
-.s-item strong {
-  font-size: 13px;
+.s-meta-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.s-meta-label {
+  color: var(--muted);
+  font-size: 11px;
+}
+.s-meta-item strong {
   font-weight: 600;
   color: rgba(11, 18, 32, 0.9);
   word-break: break-all;
 }
-.s-item[data-tone='error'] {
-  border-color: rgba(212, 56, 13, 0.22);
-  grid-column: span 2;
-}
-.s-item[data-tone='error'] strong {
+.s-meta-item[data-tone='error'] strong {
   color: rgba(212, 56, 13, 0.92);
 }
 
