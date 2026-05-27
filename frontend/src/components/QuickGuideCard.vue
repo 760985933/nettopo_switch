@@ -88,6 +88,24 @@ async function handleSwitchProfile(id: string) {
   }
 }
 
+const showDeleteConfirm = ref(false)
+const deleting = ref(false)
+
+async function handleDeleteProfile() {
+  const profile = store.currentProfile
+  if (!profile) return
+  deleting.value = true
+  try {
+    await store.deleteProfile(profile.id)
+    showDeleteConfirm.value = false
+    message.success(t('profile.deleted', { name: profile.name }))
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : String(error))
+  } finally {
+    deleting.value = false
+  }
+}
+
 async function handleAddProfile() {
   const name = newProfileName.value.trim()
   if (!name) return
@@ -270,6 +288,15 @@ async function handleCodexWrite() {
             <n-button size="tiny" secondary @click="openAddDialog">
               {{ t('profile.add') }}
             </n-button>
+            <n-button
+              v-if="profileOptions.length > 1"
+              size="tiny"
+              tertiary
+              type="error"
+              @click="showDeleteConfirm = true"
+            >
+              {{ t('common.delete') }}
+            </n-button>
           </div>
 
           <!-- Proxy action buttons -->
@@ -450,6 +477,20 @@ async function handleCodexWrite() {
         />
       </div>
     </n-modal>
+
+    <!-- Delete profile confirmation -->
+    <n-modal
+      v-model:show="showDeleteConfirm"
+      preset="dialog"
+      :title="t('common.delete')"
+      :content="t('profile.confirmDelete', { name: store.currentProfile?.name ?? '' })"
+      :positive-text="t('common.delete')"
+      :negative-text="t('profile.cancelAdd')"
+      type="warning"
+      :loading="deleting"
+      @positive-click="handleDeleteProfile"
+      @negative-click="showDeleteConfirm = false"
+    />
 
     <!-- Sandbox modal -->
     <n-modal
