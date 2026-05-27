@@ -236,7 +236,7 @@ onMounted(async () => {
             <div class="brand">
               <div class="brand-mark">CX</div>
               <div>
-                <p>codex switch</p>
+                <p>www.nettopo.com</p>
                 <div class="brand-title">
                   <strong>codex switch</strong>
                   <span class="app-version">{{ appVersion }}</span>
