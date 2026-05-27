@@ -14,14 +14,14 @@ jobs:
         include:
           - os: macos-15
             platform: darwin/arm64
-            artifact_name: nettopo-switch-darwin-arm64
-            source_path: build/bin/nettopo-switch-darwin-arm64.app
-            artifact_path: build/bin/nettopo-switch-darwin-arm64.zip
+            artifact_name: nettopo-switch-macos-arm64
+            source_path: build/bin/nettopo-switch-macos-arm64.app
+            artifact_path: build/bin/nettopo-switch-macos-arm64.zip
           - os: macos-15-intel
             platform: darwin/amd64
-            artifact_name: nettopo-switch-darwin-amd64
-            source_path: build/bin/nettopo-switch-darwin-amd64.app
-            artifact_path: build/bin/nettopo-switch-darwin-amd64.zip
+            artifact_name: nettopo-switch-macos-amd64
+            source_path: build/bin/nettopo-switch-macos-amd64.app
+            artifact_path: build/bin/nettopo-switch-macos-amd64.zip
           - os: windows-latest
             platform: windows/amd64
             artifact_name: nettopo-switch-windows-amd64
@@ -77,9 +77,9 @@ jobs:
           wails build -platform "${{ matrix.platform }}"
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             rm -rf "${{ matrix.source_path }}"
-            mv build/bin/codex-deepseek-bridge.app "${{ matrix.source_path }}"
+            mv build/bin/codex-switch.app "${{ matrix.source_path }}"
           else
-            mv build/bin/CodexDeepSeekBridge.exe "${{ matrix.source_path }}"
+            mv build/bin/codex-switch.exe "${{ matrix.source_path }}"
           fi
 
       - name: Package artifact
