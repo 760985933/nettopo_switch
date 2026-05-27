@@ -38,6 +38,11 @@ const providers = ref<string[]>([])
 const fromProvider = ref('')
 const toProvider = ref('')
 
+const showSingleMigrateModal = ref(false)
+const singleMigrateSessionId = ref('')
+const singleMigrateFromProvider = ref('')
+const singleMigrateTargetProvider = ref('openai')
+
 const showSearch = ref(false)
 const searchQuery = ref('')
 const batchMode = ref(false)
@@ -274,24 +279,30 @@ async function confirmDeleteSession(id: string) {
 
 async function confirmMigrateSingleSession(id: string, fromProvider: string) {
   const toProvider = 'openai'
-  dialog.warning({
-    title: t('sessions.migration.confirmTitle'),
-    content: t('sessions.migration.singleConfirm', { from: fromProvider, to: toProvider }),
-    positiveText: t('sessions.migration.button'),
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      try {
-        const updated = await MigrateSingleCodexSession(id, toProvider)
-        message.success(t('sessions.migration.singleSuccess'))
-        if (selectedSession.value) {
-          selectedSession.value.session.modelProvider = updated.modelProvider
-        }
-        await loadSessions()
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : String(error))
-      }
-    },
-  })
+  singleMigrateSessionId.value = id
+  singleMigrateFromProvider.value = fromProvider
+  singleMigrateTargetProvider.value = toProvider
+  showSingleMigrateModal.value = true
+}
+
+async function doMigrateSingleSession() {
+  const id = singleMigrateSessionId.value
+  const to = singleMigrateTargetProvider.value
+  if (!to) {
+    message.error('请输入目标 provider')
+    return
+  }
+  try {
+    const updated = await MigrateSingleCodexSession(id, to)
+    message.success(t('sessions.migration.singleSuccess') + ' -> ' + to)
+    if (selectedSession.value) {
+      selectedSession.value.session.modelProvider = updated.modelProvider
+    }
+    await loadSessions()
+    showSingleMigrateModal.value = false
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : String(error))
+  }
 }
 
 async function doArchiveSession(id: string) {
@@ -496,7 +507,6 @@ onMounted(() => {
               {{ selectedSession.session.isArchived ? '恢复会话' : '归档会话' }}
             </n-button>
             <n-button
-              v-if="selectedSession.session.modelProvider !== 'openai'"
               size="tiny"
               secondary
               type="warning"
@@ -580,6 +590,36 @@ onMounted(() => {
           </n-space>
         </div>
       </div>
+    </n-modal>
+
+    <!-- Single Migrate Modal -->
+    <n-modal
+      v-model:show="showSingleMigrateModal"
+      title="迁移会话"
+      preset="card"
+      style="width: 400px; max-width: 90vw;"
+      :bordered="false"
+      :segmented="{ footer: true }"
+    >
+      <template #header>
+        <span class="backup-modal-title">迁移会话 Provider</span>
+      </template>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 13px; color: var(--text);">
+          将会话 provider 从 <code style="font-weight:700;">{{ singleMigrateFromProvider }}</code> 迁移到：
+        </div>
+        <n-input
+          v-model:value="singleMigrateTargetProvider"
+          placeholder="输入目标 model_provider"
+          clearable
+        />
+      </div>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <n-button size="small" @click="showSingleMigrateModal = false">取消</n-button>
+          <n-button size="small" type="warning" @click="doMigrateSingleSession">迁移</n-button>
+        </div>
+      </template>
     </n-modal>
   </div>
 </template>

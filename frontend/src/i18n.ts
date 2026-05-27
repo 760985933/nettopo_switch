@@ -105,8 +105,8 @@ export const messages = {
       migration: {
         banner: '检测到 {count} 条旧格式会话（model_provider = “Local”），一键迁移到新格式？',
         button: '一键迁移',
-        singleButton: '迁移到 openai',
-        singleSuccess: '会话已迁移到 openai',
+        singleButton: '迁移会话',
+        singleSuccess: '会话已迁移完成',
         singleConfirm: '确认将会话 provider 从 “{from}” 迁移到 “{to}”？',
         success: '成功迁移 {count} 条会话，已在 {path} 创建备份',
         confirmTitle: '确认迁移',
