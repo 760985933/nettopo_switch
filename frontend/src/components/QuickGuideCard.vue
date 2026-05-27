@@ -181,6 +181,7 @@ watch(showSandbox, (v) => {
 
 // ── Usage balance ──
 const usageBalance = ref<UsageBalance | null>(null)
+const usageLoading = ref(false)
 let usageTimer: ReturnType<typeof setInterval> | null = null
 
 async function fetchUsageBalance() {
@@ -188,15 +189,25 @@ async function fetchUsageBalance() {
     usageBalance.value = null
     return
   }
+  usageLoading.value = true
   try {
     usageBalance.value = await GetUsageBalance()
   } catch (err) {
     usageBalance.value = { availableBalance: '', totalBalance: '', isDepleted: false, error: String(err) }
+  } finally {
+    usageLoading.value = false
   }
 }
 
+// Re-fetch when profile or apiKey changes (handles initial load after store init)
+watch(() => store.currentProfile?.apiKey, (key) => {
+  if (key) fetchUsageBalance()
+})
+
 onMounted(() => {
-  fetchUsageBalance()
+  // If store is already loaded, currentProfile will be available and the watch above handles it.
+  // If not, the watch fires when the store initializes.
+  if (store.currentProfile?.apiKey) fetchUsageBalance()
   usageTimer = setInterval(fetchUsageBalance, 60000)
 })
 
@@ -294,11 +305,15 @@ async function handleCodexWrite() {
             <span class="hint">→</span>
             <span class="mono url">{{ store.currentProfile.baseURL }}</span>
           </div>
-          <div class="hint">{{ t('guide.step.one.hint') }}</div>
 
           <!-- Usage balance -->
           <div v-if="usageBalance && !usageBalance.error" class="usage-section">
-            <div class="usage-title">{{ t('guide.usage.title') }}</div>
+            <div class="usage-head">
+              <span class="usage-title">{{ t('guide.usage.title') }}</span>
+              <n-button text size="tiny" :loading="usageLoading" @click="fetchUsageBalance">
+                <span class="usage-refresh">↻</span>
+              </n-button>
+            </div>
             <div class="usage-rows">
               <div class="usage-row">
                 <span class="usage-label">{{ t('guide.usage.available') }}:</span>
@@ -314,7 +329,12 @@ async function handleCodexWrite() {
             </div>
           </div>
           <div v-else-if="usageBalance && usageBalance.error" class="usage-section usage-section--error">
-            <div class="usage-title">{{ t('guide.usage.title') }}</div>
+            <div class="usage-head">
+              <span class="usage-title">{{ t('guide.usage.title') }}</span>
+              <n-button text size="tiny" :loading="usageLoading" @click="fetchUsageBalance">
+                <span class="usage-refresh">↻</span>
+              </n-button>
+            </div>
             <div class="usage-error">{{ usageBalance.error }}</div>
           </div>
         </div>
@@ -772,6 +792,23 @@ async function handleCodexWrite() {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.3px;
+}
+.usage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.usage-refresh {
+  display: inline-block;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.usage-refresh:hover {
+  opacity: 1;
+  transform: rotate(180deg);
 }
 .usage-rows {
   display: grid;
