@@ -19,13 +19,13 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-const appVersion = "0.0.4"
+const appVersion = "0.0.6"
 const updateManifestURL = "https://nettopo.com/nettopo-switch-version.txt"
 const updateDownloadURLTemplate = ""
 
 type App struct {
-	ctx    context.Context
-	store  *ConfigStore
+	ctx   context.Context
+	store *ConfigStore
 	proxy *ProxyRuntime
 
 	mu     sync.RWMutex
