@@ -2570,6 +2570,10 @@ func upstreamResourceURL(base string, resource string) (string, error) {
 		return "", errors.New("上游 Base URL 格式不正确")
 	}
 
+	// 当 baseURL 未包含任何路径时（如自定义提供商只填域名），自动追加 /v1
+	if parsed.Path == "" || parsed.Path == "/" {
+		parsed.Path = "/v1"
+	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/" + resource
 	return parsed.String(), nil
 }

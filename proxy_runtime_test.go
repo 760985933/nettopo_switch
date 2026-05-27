@@ -37,6 +37,30 @@ func TestUpstreamResourceURLNormalizesBasePath(t *testing.T) {
 	}
 }
 
+func TestUpstreamResourceURLAddsV1ForBareDomain(t *testing.T) {
+	got, err := upstreamResourceURL("https://api.custom.com", "chat/completions")
+	if err != nil {
+		t.Fatalf("upstreamResourceURL returned error: %v", err)
+	}
+
+	want := "https://api.custom.com/v1/chat/completions"
+	if got != want {
+		t.Fatalf("expected %s, got %s", want, got)
+	}
+}
+
+func TestUpstreamResourceURLPreservesNonV1Path(t *testing.T) {
+	got, err := upstreamResourceURL("https://open.bigmodel.cn/api/paas/v4", "chat/completions")
+	if err != nil {
+		t.Fatalf("upstreamResourceURL returned error: %v", err)
+	}
+
+	want := "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+	if got != want {
+		t.Fatalf("expected %s, got %s", want, got)
+	}
+}
+
 func TestTranslateResponsesToChatCompletionsMapsToolsAndToolOutputs(t *testing.T) {
 	cfg := defaultConfig()
 	cfg.Mappings["gpt-4.1"] = "deepseek-v4-flash"
