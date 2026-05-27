@@ -220,7 +220,7 @@ async function clearAllBackups() {
   <n-drawer
     :show="modelValue"
     placement="right"
-    :width="420"
+    :width="520"
     @update:show="(value: boolean) => emit('update:modelValue', value)"
   >
     <n-drawer-content :title="t('settings.title')" closable>
