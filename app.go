@@ -23,7 +23,7 @@ import (
 // that needs access to the Wails context outside of App methods.
 var mainAppCtx context.Context
 
-const appVersion = "0.0.6"
+const appVersion = "0.0.7"
 const updateManifestURL = "https://nettopo.com/nettopo-switch-version.txt"
 const updateDownloadURLTemplate = ""
 
