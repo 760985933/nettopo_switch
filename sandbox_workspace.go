@@ -18,7 +18,7 @@ func sandboxConfigPath() (string, error) {
 	return codexConfigPath()
 }
 
-func sandboxReadSection(doc map[string]any) SandboxWorkspaceConfig {
+func sandboxReadSection(doc map[string]any) (SandboxWorkspaceConfig, bool) {
 	cfg := SandboxWorkspaceConfig{
 		NetworkAccess:  true,
 		SandboxMode:    defaultSandboxMode,
@@ -42,8 +42,9 @@ func sandboxReadSection(doc map[string]any) SandboxWorkspaceConfig {
 				}
 			}
 		}
+		return cfg, true
 	}
-	return cfg
+	return cfg, false
 }
 
 func (a *App) GetSandboxConfig() (SandboxWorkspaceConfig, error) {
@@ -71,7 +72,8 @@ func (a *App) GetSandboxConfig() (SandboxWorkspaceConfig, error) {
 		}
 	}
 
-	return sandboxReadSection(doc), nil
+	cfg, _ := sandboxReadSection(doc)
+	return cfg, nil
 }
 
 func sandboxConfigsEqual(a, b SandboxWorkspaceConfig) bool {
@@ -99,9 +101,9 @@ func (a *App) SetSandboxConfig(cfg SandboxWorkspaceConfig) (SandboxWorkspaceConf
 		}
 	}
 
-	// Dedup: skip write if nothing changed
-	current := sandboxReadSection(doc)
-	if sandboxConfigsEqual(current, cfg) {
+	// Dedup: skip write only if the section already exists and values haven't changed
+	current, found := sandboxReadSection(doc)
+	if found && sandboxConfigsEqual(current, cfg) {
 		return cfg, nil
 	}
 

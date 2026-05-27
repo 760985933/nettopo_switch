@@ -126,6 +126,12 @@ async function loadSandboxConfig() {
     sandboxMode.value = cfg.sandboxMode || 'workspace-write'
     approvalPolicy.value = cfg.approvalPolicy || 'on-request'
     sandboxConfigLoaded = true
+    // Silently persist so [sandbox_workspace_write] section always exists in the file
+    await store.setSandboxConfig({
+      networkAccess: networkAccess.value,
+      sandboxMode: sandboxMode.value,
+      approvalPolicy: approvalPolicy.value,
+    })
   } catch (err) {
     console.error('load sandbox config failed', err)
   }
