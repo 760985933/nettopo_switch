@@ -97,6 +97,7 @@ type SandboxWorkspaceConfig struct {
 type UsageBalance struct {
 	AvailableBalance string `json:"availableBalance"`
 	TotalBalance     string `json:"totalBalance"`
+	Currency         string `json:"currency"`
 	IsDepleted       bool   `json:"isDepleted"`
 	Error            string `json:"error,omitempty"`
 }

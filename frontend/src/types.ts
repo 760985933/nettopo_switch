@@ -78,6 +78,7 @@ export interface SandboxWorkspaceConfig {
 export interface UsageBalance {
   availableBalance: string
   totalBalance: string
+  currency: string
   isDepleted: boolean
   error?: string
 }

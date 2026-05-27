@@ -503,6 +503,8 @@ func (a *App) GetUsageBalance() UsageBalance {
 	// Build balance URL from scheme + host (strip path like /v1)
 	balanceURL := fmt.Sprintf("%s://%s/user/balance", parsed.Scheme, parsed.Host)
 
+	a.appendLog("debug", "app", fmt.Sprintf("用量查询: profile=%s balanceURL=%s", profile.Name, balanceURL), "")
+
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest(http.MethodGet, balanceURL, nil)
 	if err != nil {
@@ -513,29 +515,48 @@ func (a *App) GetUsageBalance() UsageBalance {
 
 	resp, err := client.Do(req)
 	if err != nil {
+		a.appendLog("error", "app", "用量查询请求失败: "+err.Error(), "")
 		return UsageBalance{Error: err.Error()}
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	a.appendLog("debug", "app", fmt.Sprintf("用量查询响应: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body))), "")
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
 		return UsageBalance{Error: fmt.Sprintf("API 返回状态 %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))}
 	}
 
 	var balanceResp struct {
-		IsAvailable      bool   `json:"is_available"`
-		AvailableBalance string `json:"available_balance"`
-		TotalBalance     string `json:"total_balance"`
-		IsDepleted       bool   `json:"is_depleted"`
+		IsAvailable  bool `json:"is_available"`
+		BalanceInfos []struct {
+			Currency        string `json:"currency"`
+			TotalBalance    string `json:"total_balance"`
+			GrantedBalance  string `json:"granted_balance"`
+			ToppedUpBalance string `json:"topped_up_balance"`
+		} `json:"balance_infos"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&balanceResp); err != nil {
+	if err := json.Unmarshal(body, &balanceResp); err != nil {
 		return UsageBalance{Error: "解析响应失败: " + err.Error()}
 	}
 
+	available := ""
+	total := ""
+	currency := ""
+	if len(balanceResp.BalanceInfos) > 0 {
+		info := balanceResp.BalanceInfos[0]
+		available = info.ToppedUpBalance
+		total = info.TotalBalance
+		currency = info.Currency
+	}
+
+	a.appendLog("debug", "app", fmt.Sprintf("用量查询结果: available=%s total=%s currency=%s", available, total, currency), "")
+
 	return UsageBalance{
-		AvailableBalance: balanceResp.AvailableBalance,
-		TotalBalance:     balanceResp.TotalBalance,
-		IsDepleted:       balanceResp.IsDepleted,
+		AvailableBalance: available,
+		TotalBalance:     total,
+		Currency:         currency,
+		IsDepleted:       !balanceResp.IsAvailable,
 	}
 }
 

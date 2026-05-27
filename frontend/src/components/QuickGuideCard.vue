@@ -314,15 +314,12 @@ async function handleCodexWrite() {
                 <span class="usage-refresh">↻</span>
               </n-button>
             </div>
-            <div class="usage-rows">
-              <div class="usage-row">
-                <span class="usage-label">{{ t('guide.usage.available') }}:</span>
-                <span class="usage-value">{{ usageBalance.availableBalance }}</span>
-              </div>
-              <div class="usage-row">
-                <span class="usage-label">{{ t('guide.usage.total') }}:</span>
-                <span class="usage-value">{{ usageBalance.totalBalance }}</span>
-              </div>
+            <div class="usage-row">
+              <span class="usage-label">{{ t('guide.usage.available') }}:</span>
+              <span class="usage-value">{{ usageBalance.availableBalance }} {{ usageBalance.currency }}</span>
+              <span class="usage-sep">/</span>
+              <span class="usage-label">{{ t('guide.usage.total') }}:</span>
+              <span class="usage-value">{{ usageBalance.totalBalance }} {{ usageBalance.currency }}</span>
             </div>
             <div v-if="usageBalance.isDepleted" class="usage-depleted">
               {{ t('guide.usage.depleted') }}
@@ -825,6 +822,10 @@ async function handleCodexWrite() {
 .usage-value {
   font-weight: 600;
   color: rgba(11, 18, 32, 0.9);
+}
+.usage-sep {
+  color: var(--muted);
+  margin: 0 2px;
 }
 .usage-depleted {
   color: rgba(212, 56, 13, 0.92);
