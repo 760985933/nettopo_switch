@@ -3,14 +3,16 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // ---------- data types ----------
@@ -267,22 +269,23 @@ func loadModelMap() map[string]string {
 			continue
 		}
 		dbPath := filepath.Join(codexDir, entry.Name())
-		cmd := exec.Command("sqlite3", "-separator", "|", dbPath,
-			"SELECT id, model FROM threads WHERE model IS NOT NULL AND model != '';")
-		output, err := cmd.Output()
+		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			continue
 		}
-		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" {
-				continue
-			}
-			parts := strings.SplitN(line, "|", 2)
-			if len(parts) == 2 && parts[1] != "" {
-				modelMap[parts[0]] = parts[1]
+		rows, err := db.Query("SELECT id, model FROM threads WHERE model IS NOT NULL AND model != ''")
+		if err != nil {
+			db.Close()
+			continue
+		}
+		for rows.Next() {
+			var id, model string
+			if err := rows.Scan(&id, &model); err == nil && model != "" {
+				modelMap[id] = model
 			}
 		}
+		rows.Close()
+		db.Close()
 	}
 	return modelMap
 }
@@ -373,8 +376,9 @@ func findSessionInDir(root, id string) (*SessionDetail, error) {
 		if info.IsDir() || !strings.HasSuffix(info.Name(), ".jsonl") {
 			return nil
 		}
-		name := strings.TrimSuffix(info.Name(), ".jsonl")
-		if name != id && !strings.HasSuffix(name, id) && !strings.Contains(info.Name(), id) {
+		// 精确匹配 ID（支持 <uuid>.jsonl 和 rollout-<ts>-<uuid>.jsonl）
+		trimmed := strings.TrimSuffix(info.Name(), ".jsonl")
+		if trimmed != id && !strings.HasSuffix(trimmed, "-"+id) {
 			return nil
 		}
 		session, messages, err := parseSessionFile(path)
@@ -642,14 +646,10 @@ func (a *App) RestoreCodexSessions(backupPath string) (*MigrationResult, error) 
 
 // DeleteCodexSessionBackup 删除指定的会话备份文件
 func (a *App) DeleteCodexSessionBackup(backupPath string) (string, error) {
-	absBackup := backupPath
-	if _, err := os.Stat(absBackup); err != nil {
-		return "", fmt.Errorf("备份文件不存在: %s", backupPath)
-	}
-	if err := os.Remove(absBackup); err != nil {
+	if err := os.Remove(backupPath); err != nil {
 		return "", err
 	}
-	return absBackup, nil
+	return backupPath, nil
 }
 
 // ListCodexSessionProviders 返回所有会话中不同的 model_provider 列表
@@ -676,6 +676,12 @@ func (a *App) ListCodexSessionProviders() ([]string, error) {
 
 // findSessionFile 在 sessions 和 archived_sessions 目录中按 ID 查找文件路径
 func (a *App) findSessionFile(id string) (string, bool, error) {
+	// 精确匹配 ID（支持 <uuid>.jsonl 和 rollout-<ts>-<uuid>.jsonl）
+	matchFilename := func(name string) bool {
+		trimmed := strings.TrimSuffix(name, ".jsonl")
+		return trimmed == id || strings.HasSuffix(trimmed, "-"+id)
+	}
+
 	// 在 sessions 目录递归查找
 	if dir, err := codexSessionsDir(); err == nil {
 		var found string
@@ -683,7 +689,7 @@ func (a *App) findSessionFile(id string) (string, bool, error) {
 			if err != nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".jsonl") {
 				return nil
 			}
-			if strings.Contains(info.Name(), id) {
+			if matchFilename(info.Name()) {
 				found = path
 				return filepath.SkipDir
 			}
@@ -702,7 +708,7 @@ func (a *App) findSessionFile(id string) (string, bool, error) {
 				if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") {
 					continue
 				}
-				if strings.Contains(entry.Name(), id) {
+				if matchFilename(entry.Name()) {
 					return filepath.Join(dir, entry.Name()), true, nil
 				}
 			}
@@ -899,37 +905,33 @@ func migrateSQLite(from, to string) (int, error) {
 }
 
 func migrateSQLiteFile(dbPath, from, to string) (int, error) {
-	// 使用 sqlite3 CLI 更新 threads 表中的 model_provider
-	// 先检查是否有 threads 表和 model_provider 列
-	checkCmd := exec.Command("sqlite3", dbPath,
-		"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='threads';")
-	output, err := checkCmd.Output()
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return 0, nil // 无法读取数据库或没有 threads 表，跳过
+		return 0, nil
 	}
-	if strings.TrimSpace(string(output)) != "1" {
+	defer db.Close()
+
+	// 检查是否有 threads 表
+	var tableCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='threads'").Scan(&tableCount)
+	if err != nil || tableCount != 1 {
 		return 0, nil
 	}
 
 	// 检查 model_provider 列是否存在
-	colCheck := exec.Command("sqlite3", dbPath,
-		"SELECT COUNT(*) FROM pragma_table_info('threads') WHERE name='model_provider';")
-	colOutput, err := colCheck.Output()
-	if err != nil || strings.TrimSpace(string(colOutput)) != "1" {
+	var colCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('threads') WHERE name='model_provider'").Scan(&colCount)
+	if err != nil || colCount != 1 {
 		return 0, nil
 	}
 
 	// 执行迁移
-	updateCmd := exec.Command("sqlite3", dbPath,
-		fmt.Sprintf("UPDATE threads SET model_provider='%s' WHERE model_provider='%s';SELECT changes();", to, from))
-	upOutput, err := updateCmd.Output()
+	result, err := db.Exec("UPDATE threads SET model_provider=? WHERE model_provider=?", to, from)
 	if err != nil {
 		return 0, fmt.Errorf("更新失败: %w", err)
 	}
-
-	affected := 0
-	fmt.Sscanf(string(upOutput), "%d", &affected)
-	return affected, nil
+	affected, _ := result.RowsAffected()
+	return int(affected), nil
 }
 
 // ---------- backup utility ----------

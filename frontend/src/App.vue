@@ -141,8 +141,8 @@ async function checkUpdates(showUpToDateToast: boolean, showDialogOnUpdate: bool
 
 const navItems = computed(() => [
   { label: t('app.nav.overview'), to: '/overview' },
-  { label: t('app.nav.logs'), to: '/logs' },
   { label: t('app.nav.sessions'), to: '/sessions' },
+  { label: t('app.nav.logs'), to: '/logs' },
   { label: t('app.nav.contact'), to: '/contact' },
 ])
 
@@ -288,6 +288,11 @@ onMounted(async () => {
                 :options="localeOptions"
                 @update:value="(value: string) => ui.setLocale(value)"
               />
+              <n-button quaternary circle size="small" @click="ui.showHelp = true">
+                <template #icon>
+                  <span class="help-icon">?</span>
+                </template>
+              </n-button>
             </div>
           </header>
 
@@ -455,6 +460,19 @@ onMounted(async () => {
 
 .locale-select {
   width: 132px;
+}
+
+.help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
 }
 
 .status-dot {

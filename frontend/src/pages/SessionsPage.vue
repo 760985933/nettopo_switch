@@ -37,6 +37,7 @@ const providers = ref<string[]>([])
 const fromProvider = ref('')
 const toProvider = ref('')
 
+const showSearch = ref(false)
 const searchQuery = ref('')
 const batchMode = ref(false)
 const selectedIds = ref<Set<string>>(new Set())
@@ -165,7 +166,7 @@ async function doDeleteBackup(backupPath: string) {
 }
 
 async function confirmMigrate() {
-  providers.value = await ListCodexSessionProviders()
+  providers.value = (await ListCodexSessionProviders()) ?? []
   if (providers.value.length < 2) {
     message.info('没有发现需要迁移的会话（仅有一个 provider）')
     return
@@ -308,16 +309,6 @@ onMounted(() => {
 
 <template>
   <div class="sessions-page">
-    <div class="page-head">
-      <div>
-        <h2>{{ t('sessions.title') }}</h2>
-        <p>{{ t('sessions.desc') }}</p>
-      </div>
-      <n-space>
-        <n-button secondary :loading="loading" @click="loadSessions">刷新</n-button>
-      </n-space>
-    </div>
-
     <!-- Migration banner -->
     <div v-if="legacyCount > 0" class="migration-banner">
       <div class="migration-content">
@@ -329,26 +320,17 @@ onMounted(() => {
       </n-button>
     </div>
 
-    <!-- Toolbar: search, batch, backup -->
+    <!-- Toolbar: search (toggled), backup -->
     <div class="toolbar">
       <n-input
+        v-if="showSearch"
         v-model:value="searchQuery"
         placeholder="搜索会话..."
         clearable
         size="small"
         class="search-input"
-      >
-        <template #prefix>🔍</template>
-      </n-input>
+      />
       <n-space>
-        <n-button
-          size="small"
-          secondary
-          :type="batchMode ? 'primary' : 'default'"
-          @click="toggleBatchMode"
-        >
-          {{ batchMode ? '退出批量' : '批量管理' }}
-        </n-button>
         <n-button size="small" secondary @click="openBackupModal">
           备份管理
         </n-button>
@@ -360,7 +342,18 @@ onMounted(() => {
       <!-- Left: Session list -->
       <div class="left-panel">
         <div class="left-panel-head">
-          <span class="left-panel-title">{{ t('sessions.title') }}</span>
+          <div class="left-panel-title-row">
+            <span class="left-panel-title">{{ t('sessions.title') }}</span>
+            <button class="head-icon-btn" :class="{ active: showSearch }" title="搜索" @click="showSearch = !showSearch">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="head-icon-btn" :class="{ active: batchMode }" title="批量管理" @click="toggleBatchMode">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </button>
+            <button class="head-icon-btn" :class="{ spinning: loading }" title="刷新" @click="loadSessions">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+          </div>
           <div class="left-panel-head-right">
             <span v-if="batchMode && selectedIds.size > 0" class="left-panel-count">{{ selectedIds.size }} 已选</span>
             <span v-else class="left-panel-count">{{ filteredSessions.length }}</span>
@@ -433,6 +426,26 @@ onMounted(() => {
             <div class="detail-title">{{ selectedSession.session.title || selectedSession.session.id.slice(0, 12) + '…' }}</div>
           </div>
 
+          <!-- Detail meta: compact info bar -->
+          <div class="detail-info-bar">
+            <div class="info-item" @click="copyToClipboard(selectedSession.session.id)">
+              <span class="info-label">ID</span>
+              <span class="info-val mono">{{ selectedSession.session.id }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Provider</span>
+              <span class="info-val">{{ selectedSession.session.modelProvider }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">模型</span>
+              <span class="info-val">{{ selectedSession.session.model }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">时间</span>
+              <span class="info-val">{{ formatTime(selectedSession.session.createdAt) }}</span>
+            </div>
+          </div>
+
           <!-- Detail meta: cwd + resume command -->
           <div class="detail-copy-row">
             <div class="copy-item" @click="copyToClipboard(selectedSession.session.cwd)">
@@ -442,28 +455,8 @@ onMounted(() => {
             </div>
             <div class="copy-item" @click="copyToClipboard(`claude --resume ${selectedSession.session.id}`)">
               <span class="copy-label">恢复命令</span>
-              <code class="copy-value resume-cmd">claude --resume {{ selectedSession.session.id.slice(0, 8) }}…</code>
+              <code class="copy-value resume-cmd">claude --resume {{ selectedSession.session.id }}</code>
               <span class="copy-hint">点击复制</span>
-            </div>
-          </div>
-
-          <!-- Detail meta grid -->
-          <div class="detail-meta-grid">
-            <div class="meta-field">
-              <span class="meta-label">ID</span>
-              <span class="meta-val mono">{{ selectedSession.session.id.slice(0, 12) }}…</span>
-            </div>
-            <div class="meta-field">
-              <span class="meta-label">Provider</span>
-              <span class="meta-val">{{ selectedSession.session.modelProvider }}</span>
-            </div>
-            <div class="meta-field">
-              <span class="meta-label">模型</span>
-              <span class="meta-val">{{ selectedSession.session.model }}</span>
-            </div>
-            <div class="meta-field">
-              <span class="meta-label">时间</span>
-              <span class="meta-val">{{ formatTime(selectedSession.session.createdAt) }}</span>
             </div>
           </div>
 
@@ -566,28 +559,48 @@ onMounted(() => {
   flex: 1;
 }
 
-.page-head {
+.left-panel-title-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px;
-  border-radius: 22px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: 0 10px 30px rgba(14, 30, 68, 0.08);
+  align-items: center;
+  gap: 3px;
 }
 
-.page-head h2 {
-  margin: 0 0 4px;
-  font-size: 18px;
-  color: var(--text);
+.left-panel-title-row .head-icon-btn {
+  width: 22px;
+  height: 22px;
 }
 
-.page-head p {
-  margin: 0;
-  font-size: 12px;
+.head-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
   color: var(--muted);
+  transition: all 120ms ease;
+}
+
+.head-icon-btn:hover {
+  background: rgba(22, 119, 255, 0.08);
+  color: var(--accent);
+}
+
+.head-icon-btn.active {
+  background: rgba(22, 119, 255, 0.12);
+  color: var(--accent);
+}
+
+.head-icon-btn.spinning svg {
+  animation: head-icon-spin 1s linear infinite;
+}
+
+@keyframes head-icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .migration-banner {
@@ -800,22 +813,78 @@ onMounted(() => {
   word-break: break-word;
 }
 
+/* Info bar: compact single-row meta */
+.detail-info-bar {
+  display: flex;
+  gap: 1px;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.info-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 10px;
+  border-right: 1px solid var(--border);
+  cursor: default;
+}
+
+.info-item:last-child {
+  border-right: none;
+}
+
+.info-item:first-child {
+  cursor: pointer;
+}
+
+.info-item:first-child:hover .info-val {
+  color: var(--accent);
+}
+
+.info-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.info-val {
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info-val.mono {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+}
+
 /* Copy rows */
 .detail-copy-row {
   display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .copy-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 10px;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   cursor: pointer;
   transition: background 120ms ease;
+  min-width: 0;
 }
 
 .copy-item:hover {
@@ -824,17 +893,18 @@ onMounted(() => {
 }
 
 .copy-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   color: var(--muted);
   white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  flex-shrink: 0;
 }
 
 .copy-value {
   flex: 1;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text);
   min-width: 0;
   overflow: hidden;
@@ -844,66 +914,30 @@ onMounted(() => {
 
 .copy-value.resume-cmd {
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 11px;
+  font-size: 10px;
   background: rgba(22, 119, 255, 0.06);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 
 .copy-hint {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--accent);
   opacity: 0;
   transition: opacity 120ms ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .copy-item:hover .copy-hint {
   opacity: 1;
 }
 
-/* Meta grid */
-.detail-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--bg);
-}
-
-.meta-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.meta-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.meta-val {
-  font-size: 12px;
-  color: var(--text);
-}
-
-.meta-val.mono {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 11px;
-}
-
 /* Detail actions */
 .detail-actions {
   display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 /* Messages */
