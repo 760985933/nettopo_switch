@@ -97,15 +97,31 @@ func (s *UsageStore) QueryStats() (UsageStatsResponse, error) {
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
 	yearStart := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, loc)
 
+	today, err := s.querySince(todayStart)
+	if err != nil {
+		return UsageStatsResponse{}, err
+	}
+	week, err := s.querySince(weekStart)
+	if err != nil {
+		return UsageStatsResponse{}, err
+	}
+	month, err := s.querySince(monthStart)
+	if err != nil {
+		return UsageStatsResponse{}, err
+	}
+	year, err := s.querySince(yearStart)
+	if err != nil {
+		return UsageStatsResponse{}, err
+	}
 	return UsageStatsResponse{
-		Today:     s.querySince(todayStart),
-		ThisWeek:  s.querySince(weekStart),
-		ThisMonth: s.querySince(monthStart),
-		ThisYear:  s.querySince(yearStart),
+		Today:     today,
+		ThisWeek:  week,
+		ThisMonth: month,
+		ThisYear:  year,
 	}, nil
 }
 
-func (s *UsageStore) querySince(since time.Time) []UsageStats {
+func (s *UsageStore) querySince(since time.Time) ([]UsageStats, error) {
 	rows, err := s.db.Query(`
 		SELECT
 			COALESCE(provider, '') as provider,
@@ -122,7 +138,7 @@ func (s *UsageStore) querySince(since time.Time) []UsageStats {
 		ORDER BY request_count DESC
 	`, since.Format(time.RFC3339))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -143,10 +159,13 @@ func (s *UsageStore) querySince(since time.Time) []UsageStats {
 		}
 		stats = append(stats, s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	if stats == nil {
 		stats = []UsageStats{}
 	}
-	return stats
+	return stats, nil
 }
 
 func boolToInt(b bool) int {

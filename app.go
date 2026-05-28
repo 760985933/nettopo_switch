@@ -91,6 +91,14 @@ func (a *App) startup(ctx context.Context) {
 	a.initPlatformTray()
 }
 
+func (a *App) shutdown(ctx context.Context) {
+	if a.usageStore != nil {
+		if err := a.usageStore.Close(); err != nil {
+			a.appendLog("error", "app", "关闭用量数据库失败: "+err.Error(), "")
+		}
+	}
+}
+
 func (a *App) GetAppVersion() string {
 	return "v" + appVersion
 }
@@ -521,13 +529,17 @@ func (a *App) RunHealthCheck() (HealthCheckResult, error) {
 	return result, nil
 }
 
-func (a *App) GetUsageBalance() UsageBalance {
+func (a *App) GetUsageBalance(profileId string) UsageBalance {
 	cfg, err := a.GetAppConfig()
 	if err != nil {
 		return UsageBalance{Error: err.Error()}
 	}
 
-	profile, ok := cfg.Profiles[cfg.CurrentProfileID]
+	pid := profileId
+	if pid == "" {
+		pid = cfg.CurrentProfileID
+	}
+	profile, ok := cfg.Profiles[pid]
 	if !ok {
 		return UsageBalance{Error: "当前配置不存在"}
 	}
