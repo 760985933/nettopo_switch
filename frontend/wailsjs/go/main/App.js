@@ -38,6 +38,10 @@ export function GenerateCodexConfigToml() {
   return window['go']['main']['App']['GenerateCodexConfigToml']();
 }
 
+export function GenerateCodexConfigTomlProfiles() {
+  return window['go']['main']['App']['GenerateCodexConfigTomlProfiles']();
+}
+
 export function GetAppConfig() {
   return window['go']['main']['App']['GetAppConfig']();
 }
@@ -110,6 +114,10 @@ export function MigrateSingleCodexSession(arg1, arg2) {
   return window['go']['main']['App']['MigrateSingleCodexSession'](arg1, arg2);
 }
 
+export function PluginUnlockLogin() {
+  return window['go']['main']['App']['PluginUnlockLogin']();
+}
+
 export function ReadCodexConfigToml() {
   return window['go']['main']['App']['ReadCodexConfigToml']();
 }
@@ -160,6 +168,10 @@ export function StopProxy() {
 
 export function WriteCodexConfigToml() {
   return window['go']['main']['App']['WriteCodexConfigToml']();
+}
+
+export function WriteCodexConfigTomlProfiles() {
+  return window['go']['main']['App']['WriteCodexConfigTomlProfiles']();
 }
 
 export function WriteCodexConfigTomlRaw(arg1) {

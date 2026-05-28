@@ -344,16 +344,26 @@ func (a *App) StartProxy() (ProxyStatusPayload, error) {
 	status := a.proxy.Status()
 	a.appendLog("info", "app", "启动命令已提交: "+status.ListenAddress, "")
 
-	// Plugin unlock injection (non-blocking)
-	if cfg.PluginUnlockEnabled {
-		go func() {
-			if err := TryPluginUnlock(a.appendLog); err != nil {
-				a.appendLog("warn", "plugin", "插件解锁失败: "+err.Error(), "")
-			}
-		}()
+	return status, nil
+}
+
+// PluginUnlockLogin writes the Codex config in openai-direct format and then
+// injects the plugin unlock script via CDP. It requires the proxy to be
+// running (internet access needed for upstream API calls).
+func (a *App) PluginUnlockLogin() (string, error) {
+	path, err := a.WriteCodexConfigToml()
+	if err != nil {
+		return "", err
 	}
 
-	return status, nil
+	// CDP injection disabled for now
+	// go func() {
+	// 	if err := TryPluginUnlock(a.appendLog); err != nil {
+	// 		a.appendLog("warn", "plugin", "插件解锁失败: "+err.Error(), "")
+	// 	}
+	// }()
+
+	return path, nil
 }
 
 func (a *App) StopProxy() (ProxyStatusPayload, error) {

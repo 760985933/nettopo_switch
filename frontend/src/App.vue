@@ -211,6 +211,20 @@ async function handleCodexWrite() {
   }
 }
 
+async function handleCodexWriteProfiles() {
+  try {
+    const path = await store.writeCodexConfigTomlProfiles()
+    const hintPath = await store.getCodexConfigPath()
+    message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
+  } catch (error) {
+    dialog.warning({
+      title: t('app.dialog.codexWrite.title'),
+      content: error instanceof Error ? error.message : String(error),
+      positiveText: t('app.dialog.codexWrite.ok'),
+    })
+  }
+}
+
 function handleMinimise() {
   WindowMinimise()
 }
@@ -307,6 +321,7 @@ onMounted(async () => {
             @export="handleExport"
             @codex-copy="handleCodexCopy"
             @codex-write="handleCodexWrite"
+            @codex-write-profiles="handleCodexWriteProfiles"
           />
 
           <!-- Help modal -->

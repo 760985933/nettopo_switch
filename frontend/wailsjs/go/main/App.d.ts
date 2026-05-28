@@ -20,6 +20,8 @@ export function ExportConfig():Promise<string>;
 
 export function GenerateCodexConfigToml():Promise<string>;
 
+export function GenerateCodexConfigTomlProfiles():Promise<string>;
+
 export function GetAppConfig():Promise<main.AppConfig>;
 
 export function GetAppVersion():Promise<string>;
@@ -56,6 +58,8 @@ export function MigrateCodexProviders(arg1:string,arg2:string):Promise<main.Migr
 
 export function MigrateSingleCodexSession(arg1:string,arg2:string):Promise<main.CodexSession>;
 
+export function PluginUnlockLogin():Promise<string>;
+
 export function ReadCodexConfigToml():Promise<string>;
 
 export function RestartProxy():Promise<main.ProxyStatusPayload>;
@@ -81,5 +85,7 @@ export function StartProxy():Promise<main.ProxyStatusPayload>;
 export function StopProxy():Promise<main.ProxyStatusPayload>;
 
 export function WriteCodexConfigToml():Promise<string>;
+
+export function WriteCodexConfigTomlProfiles():Promise<string>;
 
 export function WriteCodexConfigTomlRaw(arg1:string):Promise<string>;

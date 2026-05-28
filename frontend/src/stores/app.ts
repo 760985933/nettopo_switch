@@ -4,6 +4,7 @@ import {
   DeleteCodexConfigBackup,
   ExportConfig,
   GenerateCodexConfigToml,
+  GenerateCodexConfigTomlProfiles,
   GetAppConfig,
   GetProxyStatus,
   GetCodexConfigPath,
@@ -12,6 +13,7 @@ import {
   GetSandboxConfig,
   ImportConfig,
   ListCodexConfigBackups,
+  PluginUnlockLogin,
   RestartProxy,
   ReadCodexConfigToml,
   RunHealthCheck,
@@ -24,6 +26,7 @@ import {
   StopProxy,
   WriteCodexConfigTomlRaw,
   WriteCodexConfigToml,
+  WriteCodexConfigTomlProfiles,
 } from '../../wailsjs/go/main/App'
 import type {
   AppConfig,
@@ -159,6 +162,15 @@ export const useAppStore = defineStore('app', {
     },
     async writeCodexConfigToml() {
       return WriteCodexConfigToml()
+    },
+    async writeCodexConfigTomlProfiles() {
+      return WriteCodexConfigTomlProfiles()
+    },
+    async generateCodexConfigTomlProfiles() {
+      return GenerateCodexConfigTomlProfiles()
+    },
+    async pluginUnlockLogin() {
+      return PluginUnlockLogin()
     },
     async getCodexConfigPath() {
       return GetCodexConfigPath()

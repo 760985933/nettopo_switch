@@ -5,6 +5,7 @@ declare module '../../wailsjs/go/main/App' {
  export function ReadCodexConfigToml(): Promise<string>
  export function RestoreCodexConfigToml(): Promise<string>
  export function RestoreCodexConfigTomlFromBackup(backupPath: string): Promise<string>
+ export function WriteCodexConfigTomlProfiles(): Promise<string>
  export function WriteCodexConfigTomlRaw(content: string): Promise<string>
 }
 
@@ -14,6 +15,7 @@ declare module '../wailsjs/go/main/App' {
  export function DeleteCodexConfigBackup(backupPath: string): Promise<string>
  export function ExportConfig(): Promise<string>
  export function GenerateCodexConfigToml(): Promise<string>
+ export function GenerateCodexConfigTomlProfiles(): Promise<string>
  export function GetAppConfig(): Promise<main.AppConfig>
  export function GetAppVersion(): Promise<string>
  export function GetProxyStatus(): Promise<main.ProxyStatusPayload>
@@ -22,6 +24,7 @@ declare module '../wailsjs/go/main/App' {
  export function GetOverviewSnapshot(): Promise<main.OverviewSnapshot>
  export function ImportConfig(configStr: string): Promise<main.AppConfig>
  export function ListCodexConfigBackups(): Promise<string[]>
+ export function PluginUnlockLogin(): Promise<string>
  export function ReadCodexConfigToml(): Promise<string>
  export function RestartProxy(): Promise<main.ProxyStatusPayload>
  export function RestoreCodexConfigToml(): Promise<string>
@@ -31,6 +34,7 @@ declare module '../wailsjs/go/main/App' {
  export function StartProxy(): Promise<main.ProxyStatusPayload>
  export function StopProxy(): Promise<main.ProxyStatusPayload>
  export function WriteCodexConfigToml(): Promise<string>
+ export function WriteCodexConfigTomlProfiles(): Promise<string>
  export function WriteCodexConfigTomlRaw(content: string): Promise<string>
 }
 
@@ -44,6 +48,7 @@ interface Window {
  DeleteCodexConfigBackup: (arg1: string) => Promise<string>
  ExportConfig: () => Promise<string>
  GenerateCodexConfigToml: () => Promise<string>
+ GenerateCodexConfigTomlProfiles: () => Promise<string>
  GetAppConfig: () => Promise<main.AppConfig>
  GetAppVersion: () => Promise<string>
  GetProxyStatus: () => Promise<main.ProxyStatusPayload>
@@ -52,6 +57,7 @@ interface Window {
  GetOverviewSnapshot: () => Promise<main.OverviewSnapshot>
  ImportConfig: (arg1: string) => Promise<main.AppConfig>
  ListCodexConfigBackups: () => Promise<string[]>
+ PluginUnlockLogin: () => Promise<string>
  ReadCodexConfigToml: () => Promise<string>
  RestartProxy: () => Promise<main.ProxyStatusPayload>
  RestoreCodexConfigToml: () => Promise<string>
@@ -61,6 +67,7 @@ interface Window {
  StartProxy: () => Promise<main.ProxyStatusPayload>
  StopProxy: () => Promise<main.ProxyStatusPayload>
  WriteCodexConfigToml: () => Promise<string>
+ WriteCodexConfigTomlProfiles: () => Promise<string>
  WriteCodexConfigTomlRaw: (arg1: string) => Promise<string>
  }
  }

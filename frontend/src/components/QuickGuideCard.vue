@@ -137,10 +137,21 @@ async function handleRestoreCodex() {
   }
 }
 
-async function handlePluginUnlockChange(val: boolean) {
+async function handlePluginUnlockLogin() {
   try {
-    await store.saveConfig({ ...store.config, pluginUnlockEnabled: val })
-    message.success(val ? t('guide.step.two.pluginUnlockEnabled') : t('guide.step.two.pluginUnlockDisabled'))
+    const path = await store.pluginUnlockLogin()
+    const hintPath = await store.getCodexConfigPath()
+    message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : String(error))
+  }
+}
+
+async function handleNoAccountLogin() {
+  try {
+    const path = await store.writeCodexConfigTomlProfiles()
+    const hintPath = await store.getCodexConfigPath()
+    message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
   } catch (error) {
     message.error(error instanceof Error ? error.message : String(error))
   }
@@ -240,15 +251,6 @@ onBeforeUnmount(() => {
   if (usageTimer) clearInterval(usageTimer)
 })
 
-async function handleCodexWrite() {
-  try {
-    const path = await store.writeCodexConfigToml()
-    const hintPath = await store.getCodexConfigPath()
-    message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : String(error))
-  }
-}
 </script>
 
 <template>
@@ -371,7 +373,7 @@ async function handleCodexWrite() {
         </div>
       </div>
 
-      <!-- Step 2: unchanged -->
+      <!-- Step 2: Login buttons -->
       <div class="step">
         <div class="step-head">
           <span class="step-badge">Step 2</span>
@@ -379,19 +381,15 @@ async function handleCodexWrite() {
         </div>
         <div class="step-body">
           <div class="actions">
-            <n-button type="primary" @click="handleCodexWrite">{{ t('guide.actions.writeFile') }}</n-button>
-            <n-button secondary @click="ui.showSettings = true">{{ t('guide.actions.preferences') }}</n-button>
+            <n-button type="primary" :disabled="!store.isRunning" @click="handlePluginUnlockLogin">
+              {{ t('guide.actions.pluginUnlockLogin') }}
+            </n-button>
+            <n-button secondary :disabled="!store.isRunning" @click="handleNoAccountLogin">
+              {{ t('guide.actions.noAccountLogin') }}
+            </n-button>
+            <n-button tertiary @click="ui.showSettings = true">{{ t('guide.actions.preferences') }}</n-button>
             <n-button tertiary @click="handleRestoreCodex">{{ t('guide.actions.restoreDefault') }}</n-button>
             <n-button tertiary @click="showSandbox = true">{{ t('guide.actions.sandbox') }}</n-button>
-          </div>
-          <div class="toggle-row">
-            <div class="toggle-row-left">
-              <span class="toggle-label">{{ t('guide.step.two.pluginUnlock') }}</span>
-            </div>
-            <n-switch
-              v-model:value="store.config.pluginUnlockEnabled"
-              @update:value="handlePluginUnlockChange"
-            />
           </div>
           <div class="restart-hint">{{ t('guide.sandbox.configHint') }}</div>
         </div>

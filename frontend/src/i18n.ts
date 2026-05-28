@@ -141,6 +141,7 @@ export const messages = {
         exportConfig: '导出配置',
         copyToml: '复制 TOML',
         writeFile: '写入文件',
+        writeFileProfiles: '写入文件 (profiles.local)',
       },
       codex: {
         title: 'Codex config.toml',
@@ -241,7 +242,7 @@ export const messages = {
     },
     guide: {
       title: '接入指引',
-      actions: { copyBaseUrl: '复制 Base URL', preferences:'偏好设置', writeFile: '写入文件', restoreDefault: '恢复默认', sandbox: '沙盒测试' },
+      actions: { copyBaseUrl: '复制 Base URL', preferences:'偏好设置', pluginUnlockLogin: '插件解锁登录', noAccountLogin: '无帐号登录', restoreDefault: '恢复默认', sandbox: '沙盒测试' },
       sandbox: {
         title: 'API 沙盒',
         networkAccess: '互联网访问',
@@ -277,10 +278,9 @@ export const messages = {
           apiKey: 'API Key',
           apiKeyNone: '无需配置',
           baseUrlAuto: '启动后自动生成',
-          hint: '推荐用”偏好设置 → Codex config.toml → 写入文件”，自动合并并保留原有 MCP/approvals 配置。',
-          pluginUnlock: '插件解锁',
-          pluginUnlockEnabled: '插件解锁已开启',
-          pluginUnlockDisabled: '插件解锁已关闭',
+          hint: '插件解锁登录（需联网）：写入 OpenID 直连配置并注入插件解锁脚本。无帐号登录（无需联网）：使用 [profiles.local] 方式配置。',
+          pluginUnlockLoginDesc: '插件解锁登录 — 需访问外网，写入 OpenID 直连配置并注入解锁脚本',
+          noAccountLoginDesc: '无帐号登录 — 无须外网，使用 profiles.local 方式写入配置',
         },
         three: {
           title: '验证与排障',
@@ -409,7 +409,7 @@ export const messages = {
       language: 'Language',
       switches: { autoStart: 'Auto-start proxy', minimizeToTray: 'Hide window on close', compactMode: 'Compact layout' },
       form: { logRetentionDays: 'Log retention (days)' },
-      actions: { save: 'Save', exportConfig: 'Export', copyToml: 'Copy TOML', writeFile: 'Write File' },
+      actions: { save: 'Save', exportConfig: 'Export', copyToml: 'Copy TOML', writeFile: 'Write File', writeFileProfiles: 'Write File (profiles.local)' },
         saving: 'Saving…',
       codex: {
         title: 'Codex config.toml',
@@ -510,7 +510,7 @@ export const messages = {
     },
     guide: {
       title: 'Quick Start',
-      actions: { copyBaseUrl: 'Copy Base URL', preferences:'Preferences', writeFile: 'Write File', restoreDefault: 'Restore default', sandbox: 'Sandbox' },
+      actions: { copyBaseUrl: 'Copy Base URL', preferences:'Preferences', pluginUnlockLogin: 'Plugin Unlock Login', noAccountLogin: 'No-Account Login', restoreDefault: 'Restore default', sandbox: 'Sandbox' },
       sandbox: {
         title: 'API Sandbox',
         networkAccess: 'Network Access',
@@ -546,10 +546,9 @@ export const messages = {
           apiKey: 'API Key',
           apiKeyNone: 'Not required',
           baseUrlAuto: 'Auto-generated after start',
-          hint: 'Recommended: Preferences → Codex config.toml → Write File, to merge and keep existing MCP/approvals.',
-          pluginUnlock: 'Plugin Unlock',
-          pluginUnlockEnabled: 'Plugin unlock enabled',
-          pluginUnlockDisabled: 'Plugin unlock disabled',
+          hint: 'Plugin Unlock Login (needs internet): writes OpenID direct config + injects unlock script. No-Account Login (offline): uses [profiles.local] config.',
+          pluginUnlockLoginDesc: 'Plugin Unlock Login — requires internet, writes OpenID config + injects unlock script',
+          noAccountLoginDesc: 'No-Account Login — no internet needed, uses profiles.local config',
         },
         three: {
           title: 'Verify & troubleshoot',
@@ -675,7 +674,7 @@ export const messages = {
       language: '言語',
       switches: { autoStart: '自動起動', minimizeToTray: '閉じると非表示', compactMode: 'コンパクト表示' },
       form: { logRetentionDays: 'ログ保持日数' },
-      actions: { save: '保存', exportConfig: 'エクスポート', copyToml: 'TOML をコピー', writeFile: 'ファイルに書き込み' },
+      actions: { save: '保存', exportConfig: 'エクスポート', copyToml: 'TOML をコピー', writeFile: 'ファイルに書き込み', writeFileProfiles: 'ファイルに書き込み (profiles.local)' },
       codex: {
         title: 'Codex config.toml',
         desc: 'Codex をローカルブリッジ経由にします。編集/保存/自動バックアップに対応します。',
@@ -766,7 +765,7 @@ export const messages = {
     },
     guide: {
       title: '接続ガイド',
-      actions: { copyBaseUrl: 'Base URL をコピー', preferences:'設定', writeFile: 'ファイルに書き込み', restoreDefault: '既定に戻す', sandbox: 'Sandbox' },
+      actions: { copyBaseUrl: 'Base URL をコピー', preferences:'設定', pluginUnlockLogin: 'プラグイン解除ログイン', noAccountLogin: 'アカウントなしログイン', restoreDefault: '既定に戻す', sandbox: 'Sandbox' },
       sandbox: {
         title: 'API サンドボックス',
         networkAccess: 'ネットワークアクセス',
@@ -802,10 +801,9 @@ export const messages = {
           apiKey: 'API Key',
           apiKeyNone: '不要',
           baseUrlAuto: '起動後に自動生成',
-          hint: '推奨: 設定 → Codex config.toml → ファイルに書き込み（既存 MCP/approvals を保持してマージ）。',
-          pluginUnlock: 'プラグイン解除',
-          pluginUnlockEnabled: 'プラグイン解除を有効化',
-          pluginUnlockDisabled: 'プラグイン解除を無効化',
+          hint: 'プラグイン解除ログイン（インターネット必要）：OpenID 直接設定を書き込み + 解除スクリプトを注入。アカウントなしログイン（オフライン）：profiles.local 設定を使用。',
+          pluginUnlockLoginDesc: 'プラグイン解除ログイン — インターネット必要',
+          noAccountLoginDesc: 'アカウントなしログイン — インターネット不要',
         },
         three: {
           title: '検証とトラブルシュート',
@@ -916,7 +914,7 @@ export const messages = {
       language: '언어',
       switches: { autoStart: '자동 시작', minimizeToTray: '닫을 때 창 숨김', compactMode: '컴팩트 레이아웃' },
       form: { logRetentionDays: '로그 보관 일수' },
-      actions: { save: '저장', exportConfig: '내보내기', copyToml: 'TOML 복사', writeFile: '파일에 쓰기' },
+      actions: { save: '저장', exportConfig: '내보내기', copyToml: 'TOML 복사', writeFile: '파일에 쓰기', writeFileProfiles: '파일에 쓰기 (profiles.local)' },
       codex: {
         title: 'Codex config.toml',
         desc: 'Codex가 로컬 브리지를 사용하도록 합니다. 편집/저장/자동 백업을 지원합니다.',
@@ -1007,7 +1005,7 @@ export const messages = {
     },
     guide: {
       title: '빠른 시작',
-      actions: { copyBaseUrl: 'Base URL 복사', preferences:'설정', writeFile: '파일에 쓰기', restoreDefault: '기본 복원', sandbox: 'Sandbox' },
+      actions: { copyBaseUrl: 'Base URL 복사', preferences:'설정', pluginUnlockLogin: '플러그인 해제 로그인', noAccountLogin: '계정 없이 로그인', restoreDefault: '기본 복원', sandbox: 'Sandbox' },
       sandbox: {
         title: 'API 샌드박스',
         networkAccess: '네트워크 액세스',
@@ -1043,10 +1041,9 @@ export const messages = {
           apiKey: 'API Key',
           apiKeyNone: '불필요',
           baseUrlAuto: '시작 후 자동 생성',
-          hint: '권장: 설정 → Codex config.toml → 파일에 쓰기(기존 MCP/approvals 유지하며 병합).',
-          pluginUnlock: '플러그인 잠금 해제',
-          pluginUnlockEnabled: '플러그인 잠금 해제 켜짐',
-          pluginUnlockDisabled: '플러그인 잠금 해제 꺼짐',
+          hint: '플러그인 해제 로그인(인터넷 필요): OpenID 직접 설정 + 해제 스크립트 주입. 계정 없이 로그인(오프라인): profiles.local 설정 사용.',
+          pluginUnlockLoginDesc: '플러그인 해제 로그인 — 인터넷 필요',
+          noAccountLoginDesc: '계정 없이 로그인 — 인터넷 불필요',
         },
         three: {
           title: '검증 및 문제 해결',
@@ -1157,7 +1154,7 @@ export const messages = {
       language: 'Langue',
       switches: { autoStart: 'Démarrage auto', minimizeToTray: 'Masquer à la fermeture', compactMode: 'Mode compact' },
       form: { logRetentionDays: 'Rétention (jours)' },
-      actions: { save: 'Enregistrer', exportConfig: 'Exporter', copyToml: 'Copier TOML', writeFile: 'Écrire le fichier' },
+      actions: { save: 'Enregistrer', exportConfig: 'Exporter', copyToml: 'Copier TOML', writeFile: 'Écrire le fichier', writeFileProfiles: 'Écrire (profiles.local)' },
       codex: {
         title: 'Codex config.toml',
         desc: 'Fait passer Codex par le proxy local. Édition, sauvegarde et sauvegardes automatiques.',
@@ -1248,7 +1245,7 @@ export const messages = {
     },
     guide: {
       title: 'Guide',
-      actions: { copyBaseUrl: 'Copier Base URL', preferences:'Préférences', writeFile: 'Écrire le fichier', restoreDefault: 'Restaurer défaut', sandbox: 'Sandbox' },
+      actions: { copyBaseUrl: 'Copier Base URL', preferences:'Préférences', pluginUnlockLogin: 'Déverrouillage plugin', noAccountLogin: 'Connexion sans compte', restoreDefault: 'Restaurer défaut', sandbox: 'Sandbox' },
       sandbox: {
         title: 'Bac à sable API',
         networkAccess: 'Accès Internet',
@@ -1284,10 +1281,9 @@ export const messages = {
           apiKey: 'API Key',
           apiKeyNone: 'Inutile',
           baseUrlAuto: 'Généré après démarrage',
-          hint: 'Recommandé : Préférences → Codex config.toml → Écrire le fichier (fusion).',
-          pluginUnlock: 'Déverrouillage plugin',
-          pluginUnlockEnabled: 'Déverrouillage activé',
-          pluginUnlockDisabled: 'Déverrouillage désactivé',
+          hint: 'Déverrouillage plugin (internet requis) : écrit config OpenID + injecte script. Connexion sans compte (hors-ligne) : utilise profiles.local.',
+          pluginUnlockLoginDesc: 'Déverrouillage plugin — internet requis',
+          noAccountLoginDesc: 'Connexion sans compte — hors-ligne',
         },
         three: {
           title: 'Vérifier & dépanner',
@@ -1398,7 +1394,7 @@ export const messages = {
       language: 'Sprache',
       switches: { autoStart: 'Automatisch starten', minimizeToTray: 'Beim Schließen ausblenden', compactMode: 'Kompaktmodus' },
       form: { logRetentionDays: 'Log-Aufbewahrung (Tage)' },
-      actions: { save: 'Speichern', exportConfig: 'Exportieren', copyToml: 'TOML kopieren', writeFile: 'Datei schreiben' },
+      actions: { save: 'Speichern', exportConfig: 'Exportieren', copyToml: 'TOML kopieren', writeFile: 'Datei schreiben', writeFileProfiles: 'Datei schreiben (profiles.local)' },
       codex: {
         title: 'Codex config.toml',
         desc: 'Codex über den lokalen Proxy. Bearbeiten, Speichern und automatische Backups.',
@@ -1489,7 +1485,7 @@ export const messages = {
     },
     guide: {
       title: 'Anleitung',
-      actions: { copyBaseUrl: 'Base URL kopieren', preferences:'Einstellungen', writeFile: 'Datei schreiben', restoreDefault: 'Standard wiederherstellen', sandbox: 'Sandbox' },
+      actions: { copyBaseUrl: 'Base URL kopieren', preferences:'Einstellungen', pluginUnlockLogin: 'Plugin-Entsperrung Login', noAccountLogin: 'Login ohne Konto', restoreDefault: 'Standard wiederherstellen', sandbox: 'Sandbox' },
       sandbox: {
         title: 'API-Sandbox',
         networkAccess: 'Internetzugriff',
@@ -1521,10 +1517,9 @@ export const messages = {
           apiKey: 'API Key',
           apiKeyNone: 'Nicht nötig',
           baseUrlAuto: 'Nach Start automatisch',
-          hint: 'Empfohlen: Einstellungen → Codex config.toml → Datei schreiben (merge).',
-          pluginUnlock: 'Plugin-Entsperrung',
-          pluginUnlockEnabled: 'Plugin-Entsperrung aktiviert',
-          pluginUnlockDisabled: 'Plugin-Entsperrung deaktiviert',
+          hint: 'Plugin-Entsperrung Login (Internet nötig): OpenID Konfig + Entsperrungsskript. Login ohne Konto (offline): profiles.local.',
+          pluginUnlockLoginDesc: 'Plugin-Entsperrung Login — Internet erforderlich',
+          noAccountLoginDesc: 'Login ohne Konto — kein Internet nötig',
         },
         three: {
           title: 'Prüfen & Troubleshooting',
@@ -1635,7 +1630,7 @@ export const messages = {
       language: 'Idioma',
       switches: { autoStart: 'Inicio automático', minimizeToTray: 'Ocultar al cerrar', compactMode: 'Diseño compacto' },
       form: { logRetentionDays: 'Retención (días)' },
-      actions: { save: 'Guardar', exportConfig: 'Exportar', copyToml: 'Copiar TOML', writeFile: 'Escribir archivo' },
+      actions: { save: 'Guardar', exportConfig: 'Exportar', copyToml: 'Copiar TOML', writeFile: 'Escribir archivo', writeFileProfiles: 'Escribir (profiles.local)' },
       codex: {
         title: 'Codex config.toml',
         desc: 'Hace que Codex use el proxy local. Permite editar/guardar y backups automáticos.',
@@ -1726,7 +1721,7 @@ export const messages = {
     },
     guide: {
       title: 'Guía',
-      actions: { copyBaseUrl: 'Copiar Base URL', preferences:'Preferencias', writeFile: 'Escribir archivo', restoreDefault: 'Restaurar por defecto', sandbox: 'Sandbox' },
+      actions: { copyBaseUrl: 'Copiar Base URL', preferences:'Preferencias', pluginUnlockLogin: 'Desbloqueo plugin', noAccountLogin: 'Acceso sin cuenta', restoreDefault: 'Restaurar por defecto', sandbox: 'Sandbox' },
       sandbox: {
         title: 'Sandbox de API',
         networkAccess: 'Acceso a Internet',
@@ -1758,10 +1753,9 @@ export const messages = {
           apiKey: 'API Key',
           apiKeyNone: 'No requiere',
           baseUrlAuto: 'Se genera al iniciar',
-          hint: 'Recomendado: Preferencias → Codex config.toml → Escribir archivo (merge).',
-          pluginUnlock: 'Desbloqueo de plugin',
-          pluginUnlockEnabled: 'Desbloqueo activado',
-          pluginUnlockDisabled: 'Desbloqueo desactivado',
+          hint: 'Desbloqueo plugin (requiere internet): escribe config OpenID + script. Acceso sin cuenta (sin conexión): profiles.local.',
+          pluginUnlockLoginDesc: 'Desbloqueo plugin — requiere internet',
+          noAccountLoginDesc: 'Acceso sin cuenta — sin conexión',
         },
         three: {
           title: 'Verificar y depurar',
