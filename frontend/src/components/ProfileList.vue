@@ -56,6 +56,8 @@ function handleMonitor(id: string) {
       <div class="profile-item-info">
         <span class="profile-item-name">{{ profile.name }}</span>
         <span class="profile-item-provider">{{ getProviderPreset(profile.provider)?.label ?? profile.provider }}</span>
+        <span class="profile-item-meta">{{ profile.baseURL }}</span>
+        <span v-if="profile.defaultModel" class="profile-item-meta">{{ profile.defaultModel }}</span>
       </div>
       <div class="profile-item-actions" @click.stop>
         <n-button size="tiny" quaternary @click="handleEdit(profile.id)">
@@ -125,6 +127,14 @@ function handleMonitor(id: string) {
 .profile-item-provider {
   font-size: 11px;
   color: var(--muted);
+}
+
+.profile-item-meta {
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  word-break: break-all;
 }
 
 .profile-item-actions {
