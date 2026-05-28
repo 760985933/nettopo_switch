@@ -259,7 +259,7 @@ export const messages = {
           onRequest: '按需询问',
           never: '从不',
         },
-        configHint: '配置已更新，请重新写入 config.toml 并重启 Codex 以生效',
+        configHint: '配置已更新，请重新点击step1中登录按钮。',
       },
       usage: {
         title: 'API 用量',
@@ -528,7 +528,7 @@ export const messages = {
           onRequest: 'On Request',
           never: 'Never',
         },
-        configHint: 'Config updated. Please re-write config.toml and restart Codex.',
+        configHint: 'Config updated. Please re-click the login button in step 1.',
       },
       usage: {
         title: 'API Usage',
@@ -784,7 +784,7 @@ export const messages = {
           onRequest: 'オンデマンド',
           never: 'しない',
         },
-        configHint: '設定が更新されました。config.toml を再書き込みして Codex を再起動してください。',
+        configHint: '設定が更新されました。step1のログインボタンを再度クリックしてください。',
       },
       usage: {
         title: 'API 使用量',
@@ -1025,7 +1025,7 @@ export const messages = {
           onRequest: '요청 시',
           never: '하지 않음',
         },
-        configHint: '설정이 업데이트되었습니다. config.toml을 다시 쓰고 Codex를 다시 시작하세요.',
+        configHint: '설정이 업데이트되었습니다. step1의 로그인 버튼을 다시 클릭하세요.',
       },
       usage: {
         title: 'API 사용량',
@@ -1266,7 +1266,7 @@ export const messages = {
           onRequest: 'Sur demande',
           never: 'Jamais',
         },
-        configHint: 'Configuration mise à jour. Veuillez réécrire config.toml et redémarrer Codex.',
+        configHint: 'Configuration mise à jour. Veuillez recliquer sur le bouton de connexion à l\'étape 1.',
       },
       usage: {
         title: 'Utilisation API',
@@ -1507,7 +1507,7 @@ export const messages = {
           onRequest: 'Auf Anfrage',
           never: 'Nie',
         },
-        configHint: 'Konfiguration aktualisiert. Bitte config.toml neu schreiben und Codex neu starten.',
+        configHint: 'Konfiguration aktualisiert. Bitte klicken Sie erneut auf den Anmeldebutton in Schritt 1.',
       },
       usage: {
         title: 'API-Nutzung',
@@ -1744,7 +1744,7 @@ export const messages = {
           onRequest: 'A pedido',
           never: 'Nunca',
         },
-        configHint: 'Configuración actualizada. Vuelva a escribir config.toml y reinicie Codex.',
+        configHint: 'Configuración actualizada. Vuelva a hacer clic en el botón de inicio de sesión en el paso 1.',
       },
       usage: {
         title: 'Uso de API',
