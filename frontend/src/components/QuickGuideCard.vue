@@ -139,6 +139,9 @@ async function handleRestoreCodex() {
 
 async function handlePluginUnlockLogin() {
   try {
+    if (!store.isRunning) {
+      await store.startProxy()
+    }
     const path = await store.pluginUnlockLogin()
     const hintPath = await store.getCodexConfigPath()
     message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
@@ -149,6 +152,9 @@ async function handlePluginUnlockLogin() {
 
 async function handleNoAccountLogin() {
   try {
+    if (!store.isRunning) {
+      await store.startProxy()
+    }
     const path = await store.writeCodexConfigTomlProfiles()
     const hintPath = await store.getCodexConfigPath()
     message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
@@ -164,6 +170,10 @@ const sandboxMode = ref('workspace-write')
 const approvalPolicy = ref('on-request')
 const sandboxConfigLoading = ref(false)
 let sandboxConfigLoaded = false
+
+// ── Step collapse ──
+const step2Expanded = ref(false)
+const step3Expanded = ref(false)
 
 async function loadSandboxConfig() {
   try {
@@ -306,15 +316,24 @@ onBeforeUnmount(() => {
             <n-button
               size="small"
               type="primary"
-              :disabled="store.isRunning || !currentProfileId"
+              :disabled="!currentProfileId"
               :loading="loading"
-              @click="emit('start')"
+              @click="handlePluginUnlockLogin"
             >
-              {{ t('config.actions.start') }}
+              {{ t('guide.actions.pluginUnlockLogin') }}
             </n-button>
             <n-button
               size="small"
               secondary
+              :disabled="!currentProfileId"
+              :loading="loading"
+              @click="handleNoAccountLogin"
+            >
+              {{ t('guide.actions.noAccountLogin') }}
+            </n-button>
+            <n-button
+              size="small"
+              tertiary
               :disabled="!store.isRunning"
               :loading="loading"
               @click="emit('restart')"
@@ -373,20 +392,15 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- Step 2: Login buttons -->
+      <!-- Step 2: advanced (collapsible) -->
       <div class="step">
-        <div class="step-head">
+        <div class="step-head step-head--clickable" @click="step2Expanded = !step2Expanded">
           <span class="step-badge">Step 2</span>
           <span class="step-title">{{ t('guide.step.two.title') }}</span>
+          <span class="step-chevron" :class="{ open: step2Expanded }">›</span>
         </div>
-        <div class="step-body">
+        <div v-show="step2Expanded" class="step-body">
           <div class="actions">
-            <n-button type="primary" :disabled="!store.isRunning" @click="handlePluginUnlockLogin">
-              {{ t('guide.actions.pluginUnlockLogin') }}
-            </n-button>
-            <n-button secondary :disabled="!store.isRunning" @click="handleNoAccountLogin">
-              {{ t('guide.actions.noAccountLogin') }}
-            </n-button>
             <n-button tertiary @click="ui.showSettings = true">{{ t('guide.actions.preferences') }}</n-button>
             <n-button tertiary @click="handleRestoreCodex">{{ t('guide.actions.restoreDefault') }}</n-button>
             <n-button tertiary @click="showSandbox = true">{{ t('guide.actions.sandbox') }}</n-button>
@@ -395,13 +409,14 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- Step 3: merged console + verify -->
+      <!-- Step 3: console & verify (collapsible) -->
       <div class="step">
-        <div class="step-head">
+        <div class="step-head step-head--clickable" @click="step3Expanded = !step3Expanded">
           <span class="step-badge">Step 3</span>
           <span class="step-title">{{ t('guide.step.three.title') }}</span>
+          <span class="step-chevron" :class="{ open: step3Expanded }">›</span>
         </div>
-        <div class="step-body">
+        <div v-show="step3Expanded" class="step-body">
           <!-- Status indicator -->
           <div class="s-status">
             <span class="s-dot" :data-status="status.status" />
@@ -580,6 +595,28 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.step-head--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.step-head--clickable:hover .step-title {
+  color: rgba(22, 119, 255, 0.85);
+}
+
+.step-chevron {
+  margin-left: auto;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+  transform: rotate(0deg);
+}
+
+.step-chevron.open {
+  transform: rotate(90deg);
 }
 
 .step-badge {

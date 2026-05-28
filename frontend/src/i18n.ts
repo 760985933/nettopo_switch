@@ -274,7 +274,7 @@ export const messages = {
           hint: '启动成功后会在本机监听一个地址，Codex 会通过它访问 /v1 接口。',
         },
         two: {
-          title: '配置 Codex 指向本地',
+          title: '高级配置区',
           baseUrl: 'Base URL',
           apiKey: 'API Key',
           apiKeyNone: '无需配置',
@@ -543,7 +543,7 @@ export const messages = {
           hint: 'After start, it listens on a local address and exposes the /v1 API for Codex.',
         },
         two: {
-          title: 'Point Codex to local',
+          title: 'Advanced Config',
           baseUrl: 'Base URL',
           apiKey: 'API Key',
           apiKeyNone: 'Not required',
@@ -799,7 +799,7 @@ export const messages = {
           hint: '起動後、ローカルで待受し、Codex は /v1 API にアクセスします。',
         },
         two: {
-          title: 'Codex をローカルに向ける',
+          title: '詳細設定',
           baseUrl: 'Base URL',
           apiKey: 'API Key',
           apiKeyNone: '不要',
@@ -1040,7 +1040,7 @@ export const messages = {
           hint: '시작되면 로컬 주소에서 /v1 API를 제공합니다.',
         },
         two: {
-          title: 'Codex를 로컬로',
+          title: '고급 설정',
           baseUrl: 'Base URL',
           apiKey: 'API Key',
           apiKeyNone: '불필요',
@@ -1281,7 +1281,7 @@ export const messages = {
           hint: 'Après démarrage, un /v1 local est exposé pour Codex.',
         },
         two: {
-          title: 'Pointer Codex en local',
+          title: 'Configuration avancée',
           baseUrl: 'Base URL',
           apiKey: 'API Key',
           apiKeyNone: 'Inutile',
@@ -1518,7 +1518,7 @@ export const messages = {
       step: {
         one: { title: 'Proxy starten', notRunning: 'Gestoppt (links "Starten" klicken)', hint: 'Nach dem Start wird lokal /v1 für Codex bereitgestellt.' },
         two: {
-          title: 'Codex lokal konfigurieren',
+          title: 'Erweiterte Konfiguration',
           baseUrl: 'Base URL',
           apiKey: 'API Key',
           apiKeyNone: 'Nicht nötig',
@@ -1755,7 +1755,7 @@ export const messages = {
       step: {
         one: { title: 'Inicia el proxy', notRunning: 'Detenido (pulsa "Iniciar" a la izquierda)', hint: 'Tras iniciar, expone /v1 local para Codex.' },
         two: {
-          title: 'Apunta Codex a local',
+          title: 'Configuración avanzada',
           baseUrl: 'Base URL',
           apiKey: 'API Key',
           apiKeyNone: 'No requiere',
