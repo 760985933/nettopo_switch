@@ -226,33 +226,34 @@ async function clearAllBackups() {
   >
     <n-drawer-content :title="t('settings.title')" closable>
       <div class="drawer-body">
-        <n-card size="small" embedded>
-          <n-space vertical size="large">
-            <n-switch v-model:value="localConfig.enableAutoStart">
-              <template #checked>{{ t('settings.switches.autoStart') }}</template>
-              <template #unchecked>{{ t('settings.switches.autoStart') }}</template>
-            </n-switch>
-            <n-switch v-model:value="localConfig.minimizeToTray">
-              <template #checked>{{ t('settings.switches.minimizeToTray') }}</template>
-              <template #unchecked>{{ t('settings.switches.minimizeToTray') }}</template>
-            </n-switch>
-            <n-switch v-model:value="localConfig.compactMode">
-              <template #checked>{{ t('settings.switches.compactMode') }}</template>
-              <template #unchecked>{{ t('settings.switches.compactMode') }}</template>
-            </n-switch>
+        <div class="settings-group">
+          <div class="settings-group-label">行为</div>
+
+          <div class="switches-row">
+            <div class="switch-item">
+              <n-switch v-model:value="localConfig.enableAutoStart" size="small" />
+              <span>{{ t('settings.switches.autoStart') }}</span>
+            </div>
+            <div class="switch-item">
+              <n-switch v-model:value="localConfig.minimizeToTray" size="small" />
+              <span>{{ t('settings.switches.minimizeToTray') }}</span>
+            </div>
+            <div class="switch-item">
+              <n-switch v-model:value="localConfig.compactMode" size="small" />
+              <span>{{ t('settings.switches.compactMode') }}</span>
+            </div>
+          </div>
+
+          <div class="log-days-row">
+            <span class="log-days-label">{{ t('settings.form.logRetentionDays') }}</span>
+            <n-input-number v-model:value="localConfig.logRetentionDays" :min="1" :max="30" size="small" style="width: 80px" />
+          </div>
+
+          <n-space class="settings-actions">
+            <n-button type="primary" size="small" @click="submit">{{ t('settings.actions.save') }}</n-button>
+            <n-button secondary size="small" @click="emit('export')">{{ t('settings.actions.exportConfig') }}</n-button>
           </n-space>
-        </n-card>
-
-        <n-form label-placement="top">
-          <n-form-item :label="t('settings.form.logRetentionDays')">
-            <n-input-number v-model:value="localConfig.logRetentionDays" :min="1" :max="30" />
-          </n-form-item>
-        </n-form>
-
-        <n-space>
-          <n-button type="primary" @click="submit">{{ t('settings.actions.save') }}</n-button>
-          <n-button secondary @click="emit('export')">{{ t('settings.actions.exportConfig') }}</n-button>
-        </n-space>
+        </div>
 
         <n-card size="small" embedded>
           <n-space vertical size="small">
@@ -297,7 +298,6 @@ async function clearAllBackups() {
 
             <n-space>
               <n-button tertiary :loading="codexBusy" @click="loadCodexRaw">{{ t('settings.codexActions.readFile') }}</n-button>
-              <n-button tertiary :loading="codexBusy" @click="generateCodexRaw">{{ t('settings.codexActions.generateTemplate') }}</n-button>
               <n-button secondary :loading="codexBusy" @click="saveCodexRaw">{{ t('settings.codexActions.saveOverwrite') }}</n-button>
               <n-button type="primary" :loading="codexBusy" @click="mergeWriteCodex">{{ t('settings.codexActions.mergeWrite') }}</n-button>
               <n-button tertiary :loading="codexBusy" @click="refreshCodexBackups">{{ t('settings.codexActions.refreshBackups') }}</n-button>
@@ -317,6 +317,51 @@ async function clearAllBackups() {
 .drawer-body {
   display: grid;
   gap: 20px;
+}
+
+.settings-group {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.settings-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.switches-row {
+  display: grid;
+  gap: 10px;
+}
+
+.switch-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(11, 18, 32, 0.86);
+}
+
+.log-days-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.log-days-label {
+  font-size: 13px;
+  color: rgba(11, 18, 32, 0.86);
+}
+
+.settings-actions {
+  padding-top: 4px;
 }
 
 .warning-text {
