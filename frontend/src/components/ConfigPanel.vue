@@ -10,14 +10,22 @@ import { PROVIDER_PRESETS, getProviderPreset } from '../utils/providers'
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
 
 const store = useAppStore()
+const props = defineProps<{
+  profileId?: string
+}>()
 const emit = defineEmits<{
   save: []
 }>()
 
-const formProfile = ref<Profile>({ ...store.currentProfile ?? {} as Profile })
+const formProfile = ref<Profile>({} as Profile)
 const showAdvanced = ref(true)
 const { t } = useI18n()
 const message = useMessage()
+
+const editingProfile = computed(() => {
+  const id = props.profileId ?? store.config.currentProfileId
+  return store.config.profiles[id] ?? null
+})
 
 const providerOptions = PROVIDER_PRESETS.map((p) => ({
   label: p.label,
@@ -26,7 +34,7 @@ const providerOptions = PROVIDER_PRESETS.map((p) => ({
 
 // Sync form when switching profiles
 watch(
-  () => store.config.currentProfileId,
+  () => props.profileId ?? store.config.currentProfileId,
   () => syncForm(),
 )
 watch(
@@ -36,7 +44,7 @@ watch(
 )
 
 function syncForm() {
-  const p = store.currentProfile
+  const p = editingProfile.value
   if (p) {
     formProfile.value = {
       ...p,
@@ -63,10 +71,13 @@ function onProviderChange(providerId: string) {
 }
 
 async function submitSave() {
+  const id = props.profileId ?? store.config.currentProfileId
   const profiles = { ...store.config.profiles }
-  profiles[store.config.currentProfileId] = { ...formProfile.value }
+  profiles[id] = { ...formProfile.value }
+  // If editing a different profile, also switch active profile
   const updated = {
     ...store.config,
+    currentProfileId: id,
     profiles,
   }
   await store.saveConfig(updated)
@@ -87,8 +98,8 @@ async function submitSave() {
     <div class="panel-head">
       <div>
         <h3>{{ t('config.title') }}</h3>
-        <p v-if="store.currentProfile">
-          {{ t('config.editing') }}: <strong>{{ store.currentProfile.name }}</strong>
+        <p v-if="editingProfile">
+          {{ t('config.editing') }}: <strong>{{ editingProfile.name }}</strong>
         </p>
         <p v-else>{{ t('config.noProfile') }}</p>
       </div>

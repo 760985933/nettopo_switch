@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
 import { useUiStore } from '../stores/ui'
-import { GetUsageBalance } from '../../wailsjs/go/main/App'
-import type { Profile, ProxyStatusPayload, HealthCheckResult, UsageBalance } from '../types'
+import type { ProxyStatusPayload, HealthCheckResult } from '../types'
 import { PROVIDER_PRESETS, getProviderPreset } from '../utils/providers'
+import ConfigPanel from './ConfigPanel.vue'
+import ProfileList from './ProfileList.vue'
+import MonitorPanel from './MonitorPanel.vue'
 
 const emit = defineEmits<{
   copy: [value: string]
@@ -57,25 +59,7 @@ const codexBaseURL = computed(() => {
   return props.listenAddress.replace(/\/+$/, '') + '/v1'
 })
 
-const profileOptions = computed(() =>
-  store.profileList.map((p) => ({
-    label: p.name,
-    value: p.id,
-  })),
-)
-
-const currentProfileId = computed(() => store.config.currentProfileId)
-
-// Add profile dialog
-const showAddDialog = ref(false)
-const adding = ref(false)
-const newProfileName = ref('')
-const newProfileProvider = ref('deepseek')
-const addProfileProviderOptions = PROVIDER_PRESETS.map((p) => ({
-  label: p.label,
-  value: p.id,
-}))
-
+// ── Profile switching ──
 async function handleSwitchProfile(id: string) {
   if (id === store.config.currentProfileId) return
   const wasRunning = store.isRunning
@@ -92,23 +76,20 @@ async function handleSwitchProfile(id: string) {
   }
 }
 
-const showDeleteConfirm = ref(false)
-const deleting = ref(false)
-const activeLoginAction = ref<'plugin' | 'noaccount' | null>(null)
+// ── Add profile dialog ──
+const showAddDialog = ref(false)
+const adding = ref(false)
+const newProfileName = ref('')
+const newProfileProvider = ref('deepseek')
+const addProfileProviderOptions = PROVIDER_PRESETS.map((p) => ({
+  label: p.label,
+  value: p.id,
+}))
 
-async function handleDeleteProfile() {
-  const profile = store.currentProfile
-  if (!profile) return
-  deleting.value = true
-  try {
-    await store.deleteProfile(profile.id)
-    showDeleteConfirm.value = false
-    message.success(t('profile.deleted', { name: profile.name }))
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : String(error))
-  } finally {
-    deleting.value = false
-  }
+function openAddDialog() {
+  newProfileName.value = ''
+  newProfileProvider.value = 'deepseek'
+  showAddDialog.value = true
 }
 
 async function handleAddProfile() {
@@ -127,20 +108,36 @@ async function handleAddProfile() {
   }
 }
 
-function openAddDialog() {
-  newProfileName.value = ''
-  newProfileProvider.value = 'deepseek'
-  showAddDialog.value = true
+// ── Delete profile ──
+const showDeleteConfirm = ref(false)
+const deleting = ref(false)
+const deletingProfileId = ref<string | null>(null)
+
+function confirmDeleteProfile(id: string) {
+  deletingProfileId.value = id
+  showDeleteConfirm.value = true
 }
 
-async function handleRestoreCodex() {
+async function handleDeleteProfile() {
+  const id = deletingProfileId.value
+  if (!id) return
+  const profile = store.config.profiles[id]
+  if (!profile) return
+  deleting.value = true
   try {
-    const path = await store.restoreCodexConfigToml()
-    message.success(t('settings.toast.restored', { path }))
+    await store.deleteProfile(id)
+    showDeleteConfirm.value = false
+    deletingProfileId.value = null
+    message.success(t('profile.deleted', { name: profile.name }))
   } catch (error) {
     message.error(error instanceof Error ? error.message : String(error))
+  } finally {
+    deleting.value = false
   }
 }
+
+// ── Login actions ──
+const activeLoginAction = ref<'plugin' | 'noaccount' | null>(null)
 
 async function handlePluginUnlockLogin() {
   activeLoginAction.value = 'plugin'
@@ -174,6 +171,40 @@ async function handleNoAccountLogin() {
   }
 }
 
+// ── Config drawer ──
+const configDrawerVisible = ref(false)
+const editingProfileId = ref<string | null>(null)
+
+function handleEditProfile(id: string) {
+  editingProfileId.value = id
+  configDrawerVisible.value = true
+}
+
+function handleConfigSaved() {
+  configDrawerVisible.value = false
+  editingProfileId.value = null
+}
+
+// ── Monitor modal ──
+const monitorVisible = ref(false)
+const monitorRef = ref<InstanceType<typeof MonitorPanel> | null>(null)
+
+function openMonitor(id: string) {
+  monitorVisible.value = true
+  // MonitorPanel fetches on next tick via expose
+  setTimeout(() => monitorRef.value?.open(), 0)
+}
+
+// ── Restore default ──
+async function handleRestoreCodex() {
+  try {
+    const path = await store.restoreCodexConfigToml()
+    message.success(t('settings.toast.restored', { path }))
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : String(error))
+  }
+}
+
 // ── Sandbox ──
 const showSandbox = ref(false)
 const networkAccess = ref(true)
@@ -182,10 +213,6 @@ const approvalPolicy = ref('on-request')
 const sandboxConfigLoading = ref(false)
 let sandboxConfigLoaded = false
 
-// ── Step collapse ──
-const step2Expanded = ref(false)
-const step3Expanded = ref(false)
-
 async function loadSandboxConfig() {
   try {
     const cfg = await store.getSandboxConfig()
@@ -193,7 +220,6 @@ async function loadSandboxConfig() {
     sandboxMode.value = cfg.sandboxMode || 'workspace-write'
     approvalPolicy.value = cfg.approvalPolicy || 'on-request'
     sandboxConfigLoaded = true
-    // Silently persist so [sandbox_workspace_write] section always exists in the file
     await store.setSandboxConfig({
       networkAccess: networkAccess.value,
       sandboxMode: sandboxMode.value,
@@ -236,42 +262,9 @@ watch(showSandbox, (v) => {
   if (v) loadSandboxConfig()
 })
 
-// ── Usage balance ──
-const usageBalance = ref<UsageBalance | null>(null)
-const usageLoading = ref(false)
-let usageTimer: ReturnType<typeof setInterval> | null = null
-
-async function fetchUsageBalance() {
-  if (!store.currentProfile?.apiKey) {
-    usageBalance.value = null
-    return
-  }
-  usageLoading.value = true
-  try {
-    usageBalance.value = await GetUsageBalance()
-  } catch (err) {
-    usageBalance.value = { availableBalance: '', totalBalance: '', currency: '', isDepleted: false, error: String(err) }
-  } finally {
-    usageLoading.value = false
-  }
-}
-
-// Re-fetch when profile or apiKey changes (handles initial load after store init)
-watch(() => store.currentProfile?.apiKey, (key) => {
-  if (key) fetchUsageBalance()
-})
-
-onMounted(() => {
-  // If store is already loaded, currentProfile will be available and the watch above handles it.
-  // If not, the watch fires when the store initializes.
-  if (store.currentProfile?.apiKey) fetchUsageBalance()
-  usageTimer = setInterval(fetchUsageBalance, 60000)
-})
-
-onBeforeUnmount(() => {
-  if (usageTimer) clearInterval(usageTimer)
-})
-
+// ── Step collapse ──
+const step2Expanded = ref(false)
+const step3Expanded = ref(false)
 </script>
 
 <template>
@@ -291,35 +284,26 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="steps">
-      <!-- Step 1: Profile selector + proxy controls -->
+      <!-- Step 1: Profile list + proxy controls -->
       <div class="step">
         <div class="step-head">
           <span class="step-badge">Step 1</span>
           <span class="step-title">{{ t('guide.step.one.title') }}</span>
         </div>
         <div class="step-body">
-          <!-- Profile selector -->
-          <div class="profile-bar">
-            <n-select
-              v-model:value="currentProfileId"
-              :options="profileOptions"
-              size="small"
-              class="profile-select"
-              @update:value="handleSwitchProfile"
-            />
-            <n-button size="tiny" secondary @click="openAddDialog">
-              {{ t('profile.add') }}
-            </n-button>
-            <n-button
-              v-if="profileOptions.length > 1"
-              size="tiny"
-              tertiary
-              type="error"
-              @click="showDeleteConfirm = true"
-            >
-              {{ t('common.delete') }}
-            </n-button>
-          </div>
+          <ProfileList
+            :profiles="store.profileList"
+            :current-profile-id="store.config.currentProfileId"
+            :loading="loading"
+            @switch="handleSwitchProfile"
+            @edit="handleEditProfile"
+            @delete="confirmDeleteProfile"
+            @monitor="openMonitor"
+          />
+
+          <n-button size="small" secondary block @click="openAddDialog">
+            {{ t('profile.add') }}
+          </n-button>
 
           <!-- Proxy action buttons -->
           <div class="action-bar">
@@ -338,7 +322,7 @@ onBeforeUnmount(() => {
               <n-button
                 size="small"
                 type="primary"
-                :disabled="!currentProfileId || activeLoginAction === 'noaccount'"
+                :disabled="!store.config.currentProfileId || activeLoginAction === 'noaccount'"
                 :loading="activeLoginAction === 'plugin'"
                 @click="handlePluginUnlockLogin"
               >
@@ -347,7 +331,7 @@ onBeforeUnmount(() => {
               <n-button
                 size="small"
                 secondary
-                :disabled="!currentProfileId || activeLoginAction === 'plugin'"
+                :disabled="!store.config.currentProfileId || activeLoginAction === 'plugin'"
                 :loading="activeLoginAction === 'noaccount'"
                 @click="handleNoAccountLogin"
               >
@@ -364,42 +348,13 @@ onBeforeUnmount(() => {
             <span class="hint">→</span>
             <span class="mono url">{{ store.currentProfile.baseURL }}</span>
           </div>
-
-          <!-- Usage balance -->
-          <div v-if="usageBalance && !usageBalance.error" class="usage-section">
-            <div class="usage-head">
-              <span class="usage-title">{{ t('guide.usage.title') }}</span>
-              <n-button text size="tiny" :loading="usageLoading" @click="fetchUsageBalance">
-                <span class="usage-refresh">↻</span>
-              </n-button>
-            </div>
-            <div class="usage-row">
-              <span class="usage-label">{{ t('guide.usage.available') }}:</span>
-              <span class="usage-value">{{ usageBalance.availableBalance }} {{ usageBalance.currency }}</span>
-              <span class="usage-sep">/</span>
-              <span class="usage-label">{{ t('guide.usage.total') }}:</span>
-              <span class="usage-value">{{ usageBalance.totalBalance }} {{ usageBalance.currency }}</span>
-            </div>
-            <div v-if="usageBalance.isDepleted" class="usage-depleted">
-              {{ t('guide.usage.depleted') }}
-            </div>
-          </div>
-          <div v-else-if="usageBalance && usageBalance.error" class="usage-section usage-section--error">
-            <div class="usage-head">
-              <span class="usage-title">{{ t('guide.usage.title') }}</span>
-              <n-button text size="tiny" :loading="usageLoading" @click="fetchUsageBalance">
-                <span class="usage-refresh">↻</span>
-              </n-button>
-            </div>
-            <div class="usage-error">{{ usageBalance.error }}</div>
-          </div>
         </div>
       </div>
 
       <!-- Step 2: advanced (collapsible) -->
       <div class="step">
         <div class="step-head step-head--clickable" @click="step2Expanded = !step2Expanded">
-          <span class="step-badge">可选</span>
+          <span class="step-badge">{{ t('guide.step.two.title') }}</span>
           <span class="step-title">{{ t('guide.step.two.title') }}</span>
           <span class="step-chevron" :class="{ open: step2Expanded }">›</span>
         </div>
@@ -416,18 +371,16 @@ onBeforeUnmount(() => {
       <!-- Step 3: console & verify (collapsible) -->
       <div class="step">
         <div class="step-head step-head--clickable" @click="step3Expanded = !step3Expanded">
-          <span class="step-badge">可选</span>
+          <span class="step-badge">{{ t('guide.step.three.title') }}</span>
           <span class="step-title">{{ t('guide.step.three.title') }}</span>
           <span class="step-chevron" :class="{ open: step3Expanded }">›</span>
         </div>
         <div v-show="step3Expanded" class="step-body">
-          <!-- Status indicator -->
           <div class="s-status">
             <span class="s-dot" :data-status="status.status" />
             <span>{{ statusLabel }}</span>
           </div>
 
-          <!-- Meta row -->
           <div class="s-meta">
             <span class="s-meta-item">
               <span class="s-meta-label">{{ t('console.meta.listenAddress') }}:</span>
@@ -443,7 +396,6 @@ onBeforeUnmount(() => {
             </span>
           </div>
 
-          <!-- Health result -->
           <div v-if="healthSummary" class="s-health" :data-tone="healthSummary.tone">
             <span class="h-dot" />
             <span>{{ healthSummary.text }}</span>
@@ -455,7 +407,6 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- Actions -->
           <div class="actions">
             <n-button type="primary" :loading="loading" @click="emit('health')">{{ t('guide.step.three.healthCheck') }}</n-button>
             <n-button secondary :loading="loading" @click="emit('refresh')">{{ t('console.actions.refresh') }}</n-button>
@@ -500,7 +451,7 @@ onBeforeUnmount(() => {
       v-model:show="showDeleteConfirm"
       preset="dialog"
       :title="t('common.delete')"
-      :content="t('profile.confirmDelete', { name: store.currentProfile?.name ?? '' })"
+      :content="t('profile.confirmDelete', { name: deletingProfileId ? (store.config.profiles[deletingProfileId]?.name ?? '') : '' })"
       :positive-text="t('common.delete')"
       :negative-text="t('profile.cancelAdd')"
       type="warning"
@@ -508,6 +459,32 @@ onBeforeUnmount(() => {
       @positive-click="handleDeleteProfile"
       @negative-click="showDeleteConfirm = false"
     />
+
+    <!-- Config editor drawer -->
+    <n-drawer
+      v-model:show="configDrawerVisible"
+      placement="right"
+      :width="520"
+      @update:show="(v: boolean) => { if (!v) editingProfileId = null }"
+    >
+      <n-drawer-content :title="t('config.title')" closable>
+        <ConfigPanel
+          v-if="configDrawerVisible"
+          :profile-id="editingProfileId ?? undefined"
+          @save="handleConfigSaved"
+        />
+      </n-drawer-content>
+    </n-drawer>
+
+    <!-- Monitor modal -->
+    <n-modal
+      v-model:show="monitorVisible"
+      :title="t('guide.monitor.title')"
+      preset="card"
+      style="width: 480px; max-width: 90vw;"
+    >
+      <MonitorPanel ref="monitorRef" />
+    </n-modal>
 
     <!-- Sandbox modal -->
     <n-modal
@@ -518,7 +495,6 @@ onBeforeUnmount(() => {
       :mask-closable="false"
     >
       <div class="sandbox">
-        <!-- Switches & selects -->
         <div class="sandbox-fields">
           <div class="sandbox-field">
             <span class="sandbox-field-label">{{ t('guide.sandbox.networkAccess') }}</span>
@@ -663,62 +639,10 @@ onBeforeUnmount(() => {
   color: rgba(22, 119, 255, 0.85);
 }
 
-.kv {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: baseline;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.kv strong {
-  color: rgba(11, 18, 32, 0.9);
-  font-weight: 600;
-}
-
-.cmd {
-  padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px dashed rgba(22, 119, 255, 0.28);
-  background: rgba(22, 119, 255, 0.06);
-  display: grid;
-  gap: 6px;
-}
-
-.cmd-label {
-  font-size: 12px;
-  color: rgba(11, 18, 32, 0.72);
-  font-weight: 600;
-}
-
 .actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-.toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--border);
-}
-
-.toggle-row-left {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.toggle-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(11, 18, 32, 0.88);
 }
 
 .restart-hint {
@@ -728,17 +652,6 @@ onBeforeUnmount(() => {
   padding: 6px 10px;
   border-radius: 8px;
   background: rgba(216, 150, 20, 0.08);
-}
-
-.profile-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.profile-select {
-  flex: 1;
-  min-width: 0;
 }
 
 .action-bar {
@@ -759,13 +672,7 @@ onBeforeUnmount(() => {
   color: rgba(11, 18, 32, 0.9);
 }
 
-@media (max-width: 920px) {
-  .guide-header {
-    flex-direction: column;
-  }
-}
-
-/* ── merged console (Step 3) ── */
+/* ── Step 3 console ── */
 .s-status {
   display: flex;
   align-items: center;
@@ -864,75 +771,19 @@ onBeforeUnmount(() => {
   word-break: break-word;
 }
 
-/* ── Usage balance ── */
-.usage-section {
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--border);
+.cmd {
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px dashed rgba(22, 119, 255, 0.28);
+  background: rgba(22, 119, 255, 0.06);
   display: grid;
   gap: 6px;
+}
+
+.cmd-label {
   font-size: 12px;
-}
-.usage-section--error {
-  opacity: 0.7;
-}
-.usage-title {
-  font-size: 11px;
+  color: rgba(11, 18, 32, 0.72);
   font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.usage-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.usage-refresh {
-  display: inline-block;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: transform 0.2s, opacity 0.2s;
-}
-.usage-refresh:hover {
-  opacity: 1;
-  transform: rotate(180deg);
-}
-.usage-rows {
-  display: grid;
-  gap: 3px;
-}
-.usage-row {
-  display: flex;
-  gap: 6px;
-  align-items: baseline;
-}
-.usage-label {
-  color: var(--muted);
-}
-.usage-value {
-  font-weight: 600;
-  color: rgba(11, 18, 32, 0.9);
-}
-.usage-sep {
-  color: var(--muted);
-  margin: 0 2px;
-}
-.usage-depleted {
-  color: rgba(212, 56, 13, 0.92);
-  font-weight: 600;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: rgba(212, 56, 13, 0.08);
-}
-.usage-error {
-  color: var(--muted);
-  word-break: break-word;
-  font-size: 11px;
 }
 
 /* ── Sandbox ── */
@@ -963,5 +814,11 @@ onBeforeUnmount(() => {
 
 .sandbox-field-select {
   width: 200px;
+}
+
+@media (max-width: 920px) {
+  .guide-header {
+    flex-direction: column;
+  }
 }
 </style>
