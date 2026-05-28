@@ -227,7 +227,7 @@ async function clearAllBackups() {
     <n-drawer-content :title="t('settings.title')" closable>
       <div class="drawer-body">
         <div class="settings-group">
-          <div class="settings-group-label">{{ t('settings.sectionLabel') }}</div>
+          <div class="settings-group-label">{{ t('settings.groupLabels.behavior') }}</div>
 
           <div class="switches-row">
             <div class="switch-item">

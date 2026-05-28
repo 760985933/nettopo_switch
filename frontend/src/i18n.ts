@@ -130,7 +130,7 @@ export const messages = {
     settings: {
       title: '偏好设置',
       language: '语言',
-      sectionLabel: '行为',
+      groupLabels: { behavior: '行为' },
       switches: {
         autoStart: '自动启动代理',
         minimizeToTray: '关闭时隐藏窗口',
@@ -408,7 +408,7 @@ export const messages = {
     settings: {
       title: 'Preferences',
       language: 'Language',
-      sectionLabel: 'Behavior',
+      groupLabels: { behavior: 'Behavior' },
       switches: { autoStart: 'Auto-start proxy', minimizeToTray: 'Hide window on close', compactMode: 'Compact layout' },
       form: { logRetentionDays: 'Log retention (days)' },
       actions: { save: 'Save', exportConfig: 'Export', copyToml: 'Copy TOML', writeFile: 'Write File', writeFileProfiles: 'Write File (profiles.local)' },
@@ -674,7 +674,7 @@ export const messages = {
     settings: {
       title: '設定',
       language: '言語',
-      sectionLabel: '動作',
+      groupLabels: { behavior: '動作' },
       switches: { autoStart: '自動起動', minimizeToTray: '閉じると非表示', compactMode: 'コンパクト表示' },
       form: { logRetentionDays: 'ログ保持日数' },
       actions: { save: '保存', exportConfig: 'エクスポート', copyToml: 'TOML をコピー', writeFile: 'ファイルに書き込み', writeFileProfiles: 'ファイルに書き込み (profiles.local)' },
@@ -915,7 +915,7 @@ export const messages = {
     settings: {
       title: '설정',
       language: '언어',
-      sectionLabel: '동작',
+      groupLabels: { behavior: '동작' },
       switches: { autoStart: '자동 시작', minimizeToTray: '닫을 때 창 숨김', compactMode: '컴팩트 레이아웃' },
       form: { logRetentionDays: '로그 보관 일수' },
       actions: { save: '저장', exportConfig: '내보내기', copyToml: 'TOML 복사', writeFile: '파일에 쓰기', writeFileProfiles: '파일에 쓰기 (profiles.local)' },
@@ -1156,7 +1156,7 @@ export const messages = {
     settings: {
       title: 'Préférences',
       language: 'Langue',
-      sectionLabel: 'Comportement',
+      groupLabels: { behavior: 'Comportement' },
       switches: { autoStart: 'Démarrage auto', minimizeToTray: 'Masquer à la fermeture', compactMode: 'Mode compact' },
       form: { logRetentionDays: 'Rétention (jours)' },
       actions: { save: 'Enregistrer', exportConfig: 'Exporter', copyToml: 'Copier TOML', writeFile: 'Écrire le fichier', writeFileProfiles: 'Écrire (profiles.local)' },
@@ -1397,7 +1397,7 @@ export const messages = {
     settings: {
       title: 'Einstellungen',
       language: 'Sprache',
-      sectionLabel: 'Verhalten',
+      groupLabels: { behavior: 'Verhalten' },
       switches: { autoStart: 'Automatisch starten', minimizeToTray: 'Beim Schließen ausblenden', compactMode: 'Kompaktmodus' },
       form: { logRetentionDays: 'Log-Aufbewahrung (Tage)' },
       actions: { save: 'Speichern', exportConfig: 'Exportieren', copyToml: 'TOML kopieren', writeFile: 'Datei schreiben', writeFileProfiles: 'Datei schreiben (profiles.local)' },
@@ -1634,7 +1634,7 @@ export const messages = {
     settings: {
       title: 'Preferencias',
       language: 'Idioma',
-      sectionLabel: 'Comportamiento',
+      groupLabels: { behavior: 'Comportamiento' },
       switches: { autoStart: 'Inicio automático', minimizeToTray: 'Ocultar al cerrar', compactMode: 'Diseño compacto' },
       form: { logRetentionDays: 'Retención (días)' },
       actions: { save: 'Guardar', exportConfig: 'Exportar', copyToml: 'Copiar TOML', writeFile: 'Escribir archivo', writeFileProfiles: 'Escribir (profiles.local)' },
