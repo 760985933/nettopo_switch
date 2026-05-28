@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { onMounted, reactive } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
 import { getProviderPreset } from '../utils/providers'
-import type { Profile } from '../types'
+import { GetUsageBalance } from '../../wailsjs/go/main/App'
+import type { Profile, UsageBalance } from '../types'
 
 const props = defineProps<{
   profiles: Profile[]
@@ -27,6 +29,28 @@ const store = useAppStore()
 const message = useMessage()
 const { t } = useI18n()
 
+const usageData = reactive<Record<string, UsageBalance | null>>({})
+const usageLoadingMap = reactive<Record<string, boolean>>({})
+
+async function fetchUsage(id: string) {
+  const profile = props.profiles.find(p => p.id === id)
+  if (!profile?.apiKey) return
+  usageLoadingMap[id] = true
+  try {
+    usageData[id] = await GetUsageBalance(id)
+  } catch (err) {
+    usageData[id] = { availableBalance: '', totalBalance: '', currency: '', isDepleted: false, error: String(err) }
+  } finally {
+    usageLoadingMap[id] = false
+  }
+}
+
+onMounted(() => {
+  props.profiles.forEach(p => {
+    if (p.apiKey) fetchUsage(p.id)
+  })
+})
+
 function handleEdit(id: string) {
   emit('edit', id)
 }
@@ -44,7 +68,6 @@ function handleMonitor(id: string) {
 }
 
 function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
-  // Disabled when another profile is logging in, or same profile doing other action
   if (props.loginProfileId === null) return false
   if (props.loginProfileId !== id) return true
   return props.activeLoginAction !== null && props.activeLoginAction !== action
@@ -89,6 +112,7 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
             <n-button
               size="small"
               type="primary"
+              :title="t('guide.actions.pluginUnlockLoginTooltip')"
               :disabled="isLoginDisabled(profile.id, 'noaccount')"
               :loading="loginProfileId === profile.id && activeLoginAction === 'plugin'"
               @click="emit('pluginLogin', profile.id)"
@@ -116,6 +140,18 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
           <n-button size="small" tertiary type="error" @click="handleDelete(profile.id)">
             {{ t('common.delete') }}
           </n-button>
+        </div>
+        <div v-if="usageData[profile.id]" class="profile-item-usage" @click.stop>
+          <template v-if="usageData[profile.id]?.error">
+            <span class="usage-error">{{ usageData[profile.id]?.error }}</span>
+          </template>
+          <template v-else>
+            <span>{{ t('guide.usage.available') }}: {{ usageData[profile.id]?.availableBalance }} {{ usageData[profile.id]?.currency }}</span>
+            <span class="usage-sep">/</span>
+            <span>{{ t('guide.usage.total') }}: {{ usageData[profile.id]?.totalBalance }} {{ usageData[profile.id]?.currency }}</span>
+            <span v-if="usageData[profile.id]?.isDepleted" class="usage-depleted">{{ t('guide.usage.depleted') }}</span>
+          </template>
+          <n-button v-if="usageLoadingMap[profile.id]" text size="tiny" loading />
         </div>
       </div>
     </div>
@@ -170,9 +206,8 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
 }
 
 .profile-item-label {
-  font-size: 10px;
-  color: var(--muted);
-  opacity: 0.7;
+  font-size: 11px;
+  color: rgba(11, 18, 32, 0.55);
   white-space: nowrap;
 }
 
@@ -191,9 +226,8 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
 }
 
 .profile-item-meta {
-  font-size: 10px;
-  color: var(--muted);
-  opacity: 0.7;
+  font-size: 11px;
+  color: rgba(11, 18, 32, 0.6);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   word-break: break-all;
 }
@@ -211,5 +245,32 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
   height: 14px;
   background: var(--border);
   margin: 0 4px;
+}
+
+.profile-item-usage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(11, 18, 32, 0.55);
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.usage-sep {
+  color: var(--border);
+}
+
+.usage-depleted {
+  color: rgba(212, 56, 13, 0.92);
+  font-weight: 600;
+}
+
+.usage-error {
+  color: var(--muted);
+  font-size: 10px;
+  word-break: break-word;
 }
 </style>
