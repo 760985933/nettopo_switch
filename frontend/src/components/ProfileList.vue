@@ -94,7 +94,24 @@ function hasApiKey(id: string) {
             <span class="profile-item-label">{{ t('config.fields.defaultModel') }}:</span> {{ profile.defaultModel }}
           </span>
         </div>
-        <div class="profile-item-actions" @click.stop>
+        <div class="profile-item-right">
+          <div v-if="usageData[profile.id]" class="profile-item-usage" @click.stop>
+            <template v-if="usageData[profile.id]?.error">
+              <span class="usage-error">{{ usageData[profile.id]?.error }}</span>
+            </template>
+            <template v-else>
+              <span>{{ t('guide.usage.available') }}: {{ usageData[profile.id]?.availableBalance }} {{ usageData[profile.id]?.currency }}</span>
+              <span class="usage-sep">/</span>
+              <span>{{ t('guide.usage.total') }}: {{ usageData[profile.id]?.totalBalance }} {{ usageData[profile.id]?.currency }}</span>
+              <span v-if="usageData[profile.id]?.isDepleted" class="usage-depleted">{{ t('guide.usage.depleted') }}</span>
+            </template>
+            <n-button text size="tiny" :loading="usageLoadingMap[profile.id]" @click="fetchUsage(profile.id)">
+              <template #icon>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              </template>
+            </n-button>
+          </div>
+          <div class="profile-item-actions" @click.stop>
           <template v-if="proxyRunning && profile.id === currentProfileId">
             <n-button
               size="small"
@@ -252,8 +269,9 @@ function hasApiKey(id: string) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
-  color: rgba(11, 18, 32, 0.55);
+  font-size: 12px;
+  color: rgba(19, 160, 90, 0.88);
+  font-weight: 500;
   padding-top: 6px;
   border-top: 1px dashed var(--border);
   margin-top: 2px;

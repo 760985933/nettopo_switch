@@ -333,7 +333,7 @@ export const messages = {
     },
     common: { delete: '删除' },
     profile: {
-      add: '+ 添加配置',
+      add: '添加配置',
       addTitle: '新建连接配置',
       confirmAdd: '添加',
       cancelAdd: '取消',
