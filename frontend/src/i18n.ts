@@ -62,7 +62,7 @@ export const messages = {
           title: '快速上手',
           step1: '在连接面板中选择提供商并填写 API Key',
           step2: '点击「保存配置」',
-          step3: '点击「启动代理」',
+          step3: '点击「插件解决登录」或「无帐号登录」按钮',
           step4: '点击左侧「写入文件」将 Codex 配置写入文件',
           step5: '打开 Codex Desktop 即可使用',
         },
@@ -274,7 +274,7 @@ export const messages = {
       step: {
         one: {
           title: '启动代理服务',
-          notRunning: '未启动（先在左侧点击“启动代理”）',
+          notRunning: '未启动（请点击「插件解决登录」或「无帐号登录」）',
           hint: '启动成功后会在本机监听一个地址，Codex 会通过它访问 /v1 接口。',
         },
         two: {
@@ -345,7 +345,7 @@ export const messages = {
           title: 'Quick Start',
           step1: 'Select a provider and enter your API Key',
           step2: 'Click "Save Config"',
-          step3: 'Click "Start Proxy"',
+          step3: 'Click "Plugin Unlock Login" or "No-Account Login"',
           step4: 'Click "Merge Write" to write Codex config',
           step5: 'Open Codex Desktop and start coding',
         },
@@ -548,7 +548,7 @@ export const messages = {
       step: {
         one: {
           title: 'Start the proxy',
-          notRunning: 'Not running (click "Start proxy" on the left first)',
+          notRunning: 'Not running (click "Plugin Unlock Login" or "No-Account Login")',
           hint: 'After start, it listens on a local address and exposes the /v1 API for Codex.',
         },
         two: {
@@ -619,7 +619,7 @@ export const messages = {
           title: 'クイックスタート',
           step1: 'プロバイダーを選択し、APIキーを入力',
           step2: '「設定を保存」をクリック',
-          step3: '「プロキシを起動」をクリック',
+          step3: '「プラグイン解除ログイン」または「アカウントなしログイン」をクリック',
           step4: '「マージ書き込み」でCodex設定を書き込み',
           step5: 'Codex Desktop を開いて使用開始',
         },
@@ -805,7 +805,7 @@ export const messages = {
       step: {
         one: {
           title: 'ブリッジを起動',
-          notRunning: '停止中（左側の「起動」を先に実行してください）',
+          notRunning: '停止中（「プラグイン解除ログイン」または「アカウントなしログイン」をクリック）',
           hint: '起動後、ローカルで待受し、Codex は /v1 API にアクセスします。',
         },
         two: {
@@ -860,7 +860,7 @@ export const messages = {
           title: '빠른 시작',
           step1: '공급자를 선택하고 API 키를 입력하세요',
           step2: '「설정 저장」을 클릭',
-          step3: '「프록시 시작」을 클릭',
+          step3: '「플러그인 해제 로그인」또는「계정 없이 로그인」을 클릭',
           step4: '「병합 쓰기」로 Codex 설정을 파일에 쓰기',
           step5: 'Codex Desktop을 열고 사용 시작',
         },
@@ -1046,7 +1046,7 @@ export const messages = {
       step: {
         one: {
           title: '브리지 시작',
-          notRunning: '중지됨(왼쪽에서 "시작"을 먼저 누르세요)',
+          notRunning: '중지됨("플러그인 해제 로그인" 또는 "계정 없이 로그인"을 클릭)',
           hint: '시작되면 로컬 주소에서 /v1 API를 제공합니다.',
         },
         two: {
@@ -1101,7 +1101,7 @@ export const messages = {
           title: 'Démarrage rapide',
           step1: 'Sélectionnez un fournisseur et entrez votre clé API',
           step2: 'Cliquez sur "Enregistrer la configuration"',
-          step3: 'Cliquez sur "Démarrer le proxy"',
+          step3: 'Cliquez sur "Déverrouillage plugin" ou "Connexion sans compte"',
           step4: 'Cliquez sur "Écriture combinée" pour écrire la config Codex',
           step5: 'Ouvrez Codex Desktop et commencez à coder',
         },
@@ -1287,7 +1287,7 @@ export const messages = {
       step: {
         one: {
           title: 'Démarrer le proxy',
-          notRunning: 'Arrêté (cliquez "Démarrer" à gauche)',
+          notRunning: 'Arrêté (cliquez "Déverrouillage plugin" ou "Connexion sans compte")',
           hint: 'Après démarrage, un /v1 local est exposé pour Codex.',
         },
         two: {
@@ -1342,7 +1342,7 @@ export const messages = {
           title: 'Schnellstart',
           step1: 'Anbieter auswählen und API-Schlüssel eingeben',
           step2: '"Einstellungen speichern" klicken',
-          step3: '"Proxy starten" klicken',
+          step3: '"Plugin-Entsperrung Login" oder "Login ohne Konto" klicken',
           step4: '"Merge-Schreiben" klicken, um Codex-Konfiguration zu schreiben',
           step5: 'Codex Desktop öffnen und loslegen',
         },
@@ -1526,7 +1526,7 @@ export const messages = {
         depleted: 'Guthaben aufgebraucht, bitte aufladen',
       },
       step: {
-        one: { title: 'Proxy starten', notRunning: 'Gestoppt (links "Starten" klicken)', hint: 'Nach dem Start wird lokal /v1 für Codex bereitgestellt.' },
+        one: { title: 'Proxy starten', notRunning: 'Gestoppt ("Plugin-Entsperrung Login" oder "Login ohne Konto" klicken)', hint: 'Nach dem Start wird lokal /v1 für Codex bereitgestellt.' },
         two: {
           title: 'Erweiterte Konfiguration',
           baseUrl: 'Base URL',
