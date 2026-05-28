@@ -265,6 +265,34 @@ export namespace main {
 		}
 	}
 	
+	export class ProjectThreadInfo {
+	    root: string;
+	    interactiveThreads: number;
+	    firstPageThreads: number;
+	    exactCwdMatches: number;
+	    verbatimCwdRows: number;
+	    topRank: number;
+	    ranks: number[];
+	    rankPreview: string;
+	    providerCounts: Record<string, number>;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProjectThreadInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.root = source["root"];
+	        this.interactiveThreads = source["interactiveThreads"];
+	        this.firstPageThreads = source["firstPageThreads"];
+	        this.exactCwdMatches = source["exactCwdMatches"];
+	        this.verbatimCwdRows = source["verbatimCwdRows"];
+	        this.topRank = source["topRank"];
+	        this.ranks = source["ranks"];
+	        this.rankPreview = source["rankPreview"];
+	        this.providerCounts = source["providerCounts"];
+	    }
+	}
 	
 	export class SandboxWorkspaceConfig {
 	    networkAccess: boolean;
@@ -331,6 +359,153 @@ export namespace main {
 		}
 	}
 	
+	export class SyncRepairStats {
+	    userEventRowsNeedingRepair: number;
+	    cwdRowsNeedingRepair: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SyncRepairStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.userEventRowsNeedingRepair = source["userEventRowsNeedingRepair"];
+	        this.cwdRowsNeedingRepair = source["cwdRowsNeedingRepair"];
+	    }
+	}
+	export class SyncRolloutInfo {
+	    sessions: Record<string, number>;
+	    archivedSessions: Record<string, number>;
+	
+	    static createFrom(source: any = {}) {
+	        return new SyncRolloutInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sessions = source["sessions"];
+	        this.archivedSessions = source["archivedSessions"];
+	    }
+	}
+	export class SyncResult {
+	    codexHome: string;
+	    targetProvider: string;
+	    previousProvider: string;
+	    backupDir: string;
+	    backupDurationMs: number;
+	    changedSessionFiles: number;
+	    skippedLockedFiles: string[];
+	    sqliteRowsUpdated: number;
+	    sqliteProviderRowsUpdated: number;
+	    sqliteUserEventRowsUpdated: number;
+	    sqliteCwdRowsUpdated: number;
+	    updatedWorkspaceRoots: number;
+	    savedWorkspaceRootCount: number;
+	    sqlitePresent: boolean;
+	    rolloutCountsBefore: SyncRolloutInfo;
+	    encryptedContentWarning?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SyncResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.codexHome = source["codexHome"];
+	        this.targetProvider = source["targetProvider"];
+	        this.previousProvider = source["previousProvider"];
+	        this.backupDir = source["backupDir"];
+	        this.backupDurationMs = source["backupDurationMs"];
+	        this.changedSessionFiles = source["changedSessionFiles"];
+	        this.skippedLockedFiles = source["skippedLockedFiles"];
+	        this.sqliteRowsUpdated = source["sqliteRowsUpdated"];
+	        this.sqliteProviderRowsUpdated = source["sqliteProviderRowsUpdated"];
+	        this.sqliteUserEventRowsUpdated = source["sqliteUserEventRowsUpdated"];
+	        this.sqliteCwdRowsUpdated = source["sqliteCwdRowsUpdated"];
+	        this.updatedWorkspaceRoots = source["updatedWorkspaceRoots"];
+	        this.savedWorkspaceRootCount = source["savedWorkspaceRootCount"];
+	        this.sqlitePresent = source["sqlitePresent"];
+	        this.rolloutCountsBefore = this.convertValues(source["rolloutCountsBefore"], SyncRolloutInfo);
+	        this.encryptedContentWarning = source["encryptedContentWarning"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class SyncStatusResult {
+	    codexHome: string;
+	    currentProvider: string;
+	    currentProviderImplicit: boolean;
+	    configuredProviders: string[];
+	    rolloutCounts: SyncRolloutInfo;
+	    lockedRolloutFiles: string[];
+	    encryptedContentCounts?: SyncRolloutInfo;
+	    encryptedContentWarning?: string;
+	    sqliteCounts?: SyncRolloutInfo;
+	    sqliteUnreadable: boolean;
+	    sqliteError?: string;
+	    sqliteRepairStats?: SyncRepairStats;
+	    projectThreadVisibility: ProjectThreadInfo[];
+	    backupRoot: string;
+	    backupCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SyncStatusResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.codexHome = source["codexHome"];
+	        this.currentProvider = source["currentProvider"];
+	        this.currentProviderImplicit = source["currentProviderImplicit"];
+	        this.configuredProviders = source["configuredProviders"];
+	        this.rolloutCounts = this.convertValues(source["rolloutCounts"], SyncRolloutInfo);
+	        this.lockedRolloutFiles = source["lockedRolloutFiles"];
+	        this.encryptedContentCounts = this.convertValues(source["encryptedContentCounts"], SyncRolloutInfo);
+	        this.encryptedContentWarning = source["encryptedContentWarning"];
+	        this.sqliteCounts = this.convertValues(source["sqliteCounts"], SyncRolloutInfo);
+	        this.sqliteUnreadable = source["sqliteUnreadable"];
+	        this.sqliteError = source["sqliteError"];
+	        this.sqliteRepairStats = this.convertValues(source["sqliteRepairStats"], SyncRepairStats);
+	        this.projectThreadVisibility = this.convertValues(source["projectThreadVisibility"], ProjectThreadInfo);
+	        this.backupRoot = source["backupRoot"];
+	        this.backupCount = source["backupCount"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class UpdateCheckResult {
 	    currentVersion: string;
 	    latestVersion: string;

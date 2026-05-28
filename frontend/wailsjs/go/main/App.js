@@ -70,6 +70,10 @@ export function GetSandboxConfig() {
   return window['go']['main']['App']['GetSandboxConfig']();
 }
 
+export function GetSyncStatus() {
+  return window['go']['main']['App']['GetSyncStatus']();
+}
+
 export function GetUsageBalance() {
   return window['go']['main']['App']['GetUsageBalance']();
 }
@@ -128,6 +132,10 @@ export function RestoreCodexSessions(arg1) {
 
 export function RunHealthCheck() {
   return window['go']['main']['App']['RunHealthCheck']();
+}
+
+export function RunSync(arg1) {
+  return window['go']['main']['App']['RunSync'](arg1);
 }
 
 export function SaveAppConfig(arg1) {

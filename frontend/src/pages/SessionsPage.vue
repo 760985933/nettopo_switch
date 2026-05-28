@@ -15,6 +15,8 @@ import {
   MigrateCodexProviders,
   MigrateSingleCodexSession,
   RestoreCodexSessions,
+  RunSync,
+  GetSyncStatus,
 } from '../../wailsjs/go/main/App'
 
 const { t } = useI18n()
@@ -37,6 +39,11 @@ const showBackupModal = ref(false)
 const providers = ref<string[]>([])
 const fromProvider = ref('')
 const toProvider = ref('')
+
+// Diagnostic status
+const showStatusModal = ref(false)
+const syncStatus = ref<main.SyncStatusResult | null>(null)
+const statusLoading = ref(false)
 
 const showSingleMigrateModal = ref(false)
 const singleMigrateSessionId = ref('')
@@ -72,6 +79,11 @@ function formatTime(iso: string): string {
   if (isNaN(d.getTime())) return iso
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+function formatCounts(counts: Record<string, number> | undefined): string {
+  if (!counts) return '(none)'
+  return Object.entries(counts).map(([k, v]) => `${k}: ${v}`).join(', ') || '(none)'
 }
 
 async function copyToClipboard(text: string) {
@@ -168,6 +180,18 @@ async function doDeleteBackup(backupPath: string) {
     message.error(error instanceof Error ? error.message : String(error))
   } finally {
     deletingBackup.value = false
+  }
+}
+
+async function loadSyncStatus() {
+  statusLoading.value = true
+  try {
+    syncStatus.value = await GetSyncStatus()
+    showStatusModal.value = true
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : String(error))
+  } finally {
+    statusLoading.value = false
   }
 }
 
@@ -365,6 +389,9 @@ onMounted(() => {
         class="search-input"
       />
       <n-space>
+        <n-button size="small" secondary :loading="statusLoading" @click="loadSyncStatus">
+          诊断
+        </n-button>
         <n-button size="small" secondary @click="openBackupModal">
           备份管理
         </n-button>
@@ -620,6 +647,96 @@ onMounted(() => {
           <n-button size="small" type="warning" @click="doMigrateSingleSession">迁移</n-button>
         </div>
       </template>
+    </n-modal>
+
+    <!-- Sync Status Modal -->
+    <n-modal
+      v-model:show="showStatusModal"
+      title="会话同步诊断"
+      preset="card"
+      style="width: 680px; max-width: 90vw; max-height: 80vh;"
+      :bordered="false"
+    >
+      <template #header>
+        <span class="backup-modal-title">会话同步诊断</span>
+      </template>
+      <div v-if="syncStatus" style="max-height: 60vh; overflow-y: auto; font-size: 13px;">
+        <div style="margin-bottom: 12px;">
+          <strong>Codex Home:</strong> {{ syncStatus.codexHome }}<br/>
+          <strong>当前 Provider:</strong> {{ syncStatus.currentProvider }}{{ syncStatus.currentProviderImplicit ? ' (默认)' : '' }}<br/>
+          <strong>已配置 Providers:</strong> {{ syncStatus.configuredProviders.join(', ') }}
+        </div>
+
+        <n-divider style="margin: 8px 0;" />
+
+        <div style="margin-bottom: 12px;">
+          <strong>Rollout 文件分布:</strong>
+          <div style="padding-left: 16px;">
+            <div>sessions: {{ formatCounts(syncStatus.rolloutCounts?.sessions) }}</div>
+            <div>archived: {{ formatCounts(syncStatus.rolloutCounts?.archivedSessions) }}</div>
+          </div>
+          <div v-if="syncStatus.lockedRolloutFiles?.length" style="color: var(--warning); margin-top: 4px;">
+            锁定文件: {{ syncStatus.lockedRolloutFiles.length }} 个
+          </div>
+        </div>
+
+        <div v-if="syncStatus.encryptedContentWarning" style="margin-bottom: 12px; padding: 8px; border-radius: 6px; background: rgba(216,150,20,0.08); border: 1px solid rgba(216,150,20,0.2);">
+          ⚠️ {{ syncStatus.encryptedContentWarning }}
+        </div>
+
+        <n-divider style="margin: 8px 0;" />
+
+        <div style="margin-bottom: 12px;">
+          <strong>SQLite 状态:</strong>
+          <div v-if="syncStatus.sqliteUnreadable" style="color: var(--error);">
+            {{ syncStatus.sqliteError || '无法读取 state_5.sqlite' }}
+          </div>
+          <div v-else-if="syncStatus.sqliteCounts" style="padding-left: 16px;">
+            <div>sessions: {{ formatCounts(syncStatus.sqliteCounts.sessions) }}</div>
+            <div>archived: {{ formatCounts(syncStatus.sqliteCounts.archivedSessions) }}</div>
+            <div v-if="syncStatus.sqliteRepairStats" style="margin-top: 4px; color: var(--warning);">
+              <div v-if="syncStatus.sqliteRepairStats.userEventRowsNeedingRepair > 0">
+                需修复 has_user_event: {{ syncStatus.sqliteRepairStats.userEventRowsNeedingRepair }} 行
+              </div>
+              <div v-if="syncStatus.sqliteRepairStats.cwdRowsNeedingRepair > 0">
+                需修复 cwd 路径: {{ syncStatus.sqliteRepairStats.cwdRowsNeedingRepair }} 行
+              </div>
+              <div v-if="!syncStatus.sqliteRepairStats.userEventRowsNeedingRepair && !syncStatus.sqliteRepairStats.cwdRowsNeedingRepair">
+                SQLite 数据一致，无需修复
+              </div>
+            </div>
+          </div>
+          <div v-else style="color: var(--muted);">state_5.sqlite 未找到</div>
+        </div>
+
+        <n-divider v-if="syncStatus.projectThreadVisibility?.length" style="margin: 8px 0;" />
+
+        <div v-if="syncStatus.projectThreadVisibility?.length" style="margin-bottom: 12px;">
+          <strong>项目可见性:</strong>
+          <div
+            v-for="proj in syncStatus.projectThreadVisibility"
+            :key="proj.root"
+            style="padding: 6px 12px; margin-top: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px;"
+          >
+            <div style="font-family: monospace; font-size: 11px; margin-bottom: 4px; word-break: break-all;">{{ proj.root }}</div>
+            <div>
+              交互会话: {{ proj.interactiveThreads }}
+              | 首页可见: {{ proj.firstPageThreads }}/50
+              | 排名: {{ proj.rankPreview }}
+            </div>
+            <div>Providers: {{ formatCounts(proj.providerCounts) }}</div>
+          </div>
+        </div>
+
+        <n-divider style="margin: 8px 0;" />
+
+        <div style="color: var(--muted); font-size: 12px;">
+          备份数: {{ syncStatus.backupCount }} | 备份路径: {{ syncStatus.backupRoot }}
+        </div>
+      </div>
+      <div v-else style="padding: 30px; text-align: center;">
+        <n-spin :size="20" />
+      </div>
     </n-modal>
   </div>
 </template>

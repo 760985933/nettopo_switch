@@ -36,6 +36,8 @@ export function GetProxyStatus():Promise<main.ProxyStatusPayload>;
 
 export function GetSandboxConfig():Promise<main.SandboxWorkspaceConfig>;
 
+export function GetSyncStatus():Promise<main.SyncStatusResult>;
+
 export function GetUsageBalance():Promise<main.UsageBalance>;
 
 export function HasLegacySessions():Promise<boolean>;
@@ -65,6 +67,8 @@ export function RestoreCodexConfigTomlFromBackup(arg1:string):Promise<string>;
 export function RestoreCodexSessions(arg1:string):Promise<main.MigrationResult>;
 
 export function RunHealthCheck():Promise<main.HealthCheckResult>;
+
+export function RunSync(arg1:string):Promise<main.SyncResult>;
 
 export function SaveAppConfig(arg1:main.AppConfig):Promise<main.AppConfig>;
 
