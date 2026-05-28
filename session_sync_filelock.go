@@ -1,10 +1,7 @@
 package main
 
 import (
-	"os"
-	"runtime"
 	"strings"
-	"syscall"
 )
 
 // isRolloutFileBusyError checks if an error indicates the file is locked by another process.
@@ -18,50 +15,6 @@ func isRolloutFileBusyError(err error) bool {
 		strings.Contains(msg, "being used by another process") ||
 		strings.Contains(msg, "currently in use") ||
 		strings.Contains(msg, "eperm")
-}
-
-// tryAcquireExclusive attempts to open a file for exclusive read-write access.
-// Returns a handle and true on success, or nil and false if the file is locked.
-func tryAcquireExclusive(filePath string) (*os.File, bool, error) {
-	// On Unix, try flock-based exclusive lock
-	if runtime.GOOS != "windows" {
-		f, err := os.OpenFile(filePath, os.O_RDWR, 0)
-		if err != nil {
-			if isRolloutFileBusyError(err) {
-				return nil, false, nil
-			}
-			return nil, false, err
-		}
-		err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
-		if err != nil {
-			f.Close()
-			if err == syscall.EWOULDBLOCK || err == syscall.EAGAIN {
-				return nil, false, nil
-			}
-			return nil, false, nil
-		}
-		return f, true, nil
-	}
-
-	// On Windows, try opening with exclusive access
-	f, err := os.OpenFile(filePath, os.O_RDWR, 0)
-	if err != nil {
-		if isRolloutFileBusyError(err) {
-			return nil, false, nil
-		}
-		return nil, false, err
-	}
-	return f, true, nil
-}
-
-func releaseExclusiveLock(f *os.File) {
-	if f == nil {
-		return
-	}
-	if runtime.GOOS != "windows" {
-		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-	}
-	f.Close()
 }
 
 // findLockedFiles returns paths that are currently locked (unable to acquire exclusive access).

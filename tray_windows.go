@@ -37,12 +37,12 @@ func setupWindowsTray(a *App) {
 
 	// Initial balance fetch + periodic updates
 	time.Sleep(2 * time.Second)
-	_ = a.GetUsageBalance()
+	_ = a.GetUsageBalance("")
 
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		_ = a.GetUsageBalance()
+		_ = a.GetUsageBalance("")
 	}
 }
 
