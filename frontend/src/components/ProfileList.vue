@@ -74,19 +74,9 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
           </span>
         </div>
         <div class="profile-item-actions" @click.stop>
-          <n-button size="tiny" tertiary @click="handleEdit(profile.id)">
-            {{ t('guide.step.one.edit') }}
-          </n-button>
-          <n-button size="tiny" tertiary @click="handleMonitor(profile.id)">
-            {{ t('guide.step.one.monitor') }}
-          </n-button>
-          <n-button size="tiny" tertiary type="error" @click="handleDelete(profile.id)">
-            {{ t('common.delete') }}
-          </n-button>
-          <div class="profile-item-actions-sep" />
           <template v-if="proxyRunning && profile.id === currentProfileId">
             <n-button
-              size="tiny"
+              size="small"
               tertiary
               type="error"
               :loading="loading"
@@ -97,7 +87,7 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
           </template>
           <template v-else>
             <n-button
-              size="tiny"
+              size="small"
               type="primary"
               :disabled="isLoginDisabled(profile.id, 'noaccount')"
               :loading="loginProfileId === profile.id && activeLoginAction === 'plugin'"
@@ -106,8 +96,9 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
               {{ t('guide.actions.pluginUnlockLogin') }}
             </n-button>
             <n-button
-              size="tiny"
+              size="small"
               secondary
+              type="primary"
               :disabled="isLoginDisabled(profile.id, 'plugin')"
               :loading="loginProfileId === profile.id && activeLoginAction === 'noaccount'"
               @click="emit('noaccountLogin', profile.id)"
@@ -115,6 +106,16 @@ function isLoginDisabled(id: string, action: 'plugin' | 'noaccount') {
               {{ t('guide.actions.noAccountLogin') }}
             </n-button>
           </template>
+          <div class="profile-item-actions-sep" />
+          <n-button size="small" tertiary @click="handleEdit(profile.id)">
+            {{ t('guide.step.one.edit') }}
+          </n-button>
+          <n-button size="small" tertiary @click="handleMonitor(profile.id)">
+            {{ t('guide.step.one.monitor') }}
+          </n-button>
+          <n-button size="small" tertiary type="error" @click="handleDelete(profile.id)">
+            {{ t('common.delete') }}
+          </n-button>
         </div>
       </div>
     </div>
