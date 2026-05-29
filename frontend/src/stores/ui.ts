@@ -6,6 +6,7 @@ export const useUiStore = defineStore('ui', {
     showSettings: false,
     showHelp: false,
     locale: detectInitialLocale() as SupportedLocale,
+    sidebarCollapsed: false,
   }),
   actions: {
     setLocale(value: string) {
@@ -14,6 +15,9 @@ export const useUiStore = defineStore('ui', {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('ui.locale', next)
       }
+    },
+    toggleSidebar() {
+      this.sidebarCollapsed = !this.sidebarCollapsed
     },
   },
 })

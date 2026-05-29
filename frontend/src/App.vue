@@ -3,7 +3,6 @@ import { computed, watch } from 'vue'
 import { lightTheme, dateDeDE, dateEnUS, dateEsAR, dateFrFR, dateJaJP, dateKoKR, dateZhCN, deDE, enUS, esAR, frFR, jaJP, koKR, zhCN } from 'naive-ui'
 import { RouterView } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { WindowMinimise, Quit } from '../wailsjs/runtime/runtime'
 import SettingsDrawer from './components/SettingsDrawer.vue'
 import SidebarNav from './components/SidebarNav.vue'
 import { useAppStore } from './stores/app'
@@ -12,9 +11,6 @@ import { useUiStore } from './stores/ui'
 const store = useAppStore()
 const ui = useUiStore()
 const { t, locale } = useI18n()
-
-function handleMinimise() { WindowMinimise() }
-function handleClose() { Quit() }
 
 watch(() => ui.locale, (value) => { locale.value = value }, { immediate: true })
 
@@ -48,19 +44,10 @@ const naiveDateLocale = computed(() => {
     <n-dialog-provider>
       <n-message-provider placement="bottom-right">
         <div class="shell">
-          <div class="titlebar">
-            <div class="titlebar-drag" />
-            <div class="titlebar-actions">
-              <n-button tertiary size="small" @click="handleMinimise">—</n-button>
-              <n-button tertiary type="error" size="small" @click="handleClose">×</n-button>
-            </div>
-          </div>
-          <div class="shell-body">
-            <SidebarNav @show-help="ui.showHelp = true" />
-            <main class="content">
-              <RouterView />
-            </main>
-          </div>
+          <SidebarNav @show-help="ui.showHelp = true" />
+          <main class="content">
+            <RouterView />
+          </main>
 
           <SettingsDrawer
             v-model:model-value="ui.showSettings"
@@ -99,38 +86,8 @@ const naiveDateLocale = computed(() => {
 <style scoped>
 .shell {
   display: flex;
-  flex-direction: column;
   height: 100vh;
   overflow: hidden;
-}
-
-.titlebar {
-  display: flex;
-  align-items: center;
-  height: 32px;
-  min-height: 32px;
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border);
-  -webkit-app-region: drag;
-  user-select: none;
-}
-
-.titlebar-drag {
-  flex: 1;
-}
-
-.titlebar-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding-right: 10px;
-  -webkit-app-region: no-drag;
-}
-
-.shell-body {
-  display: flex;
-  flex: 1;
-  min-height: 0;
 }
 
 .content {

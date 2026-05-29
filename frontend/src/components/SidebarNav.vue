@@ -38,14 +38,16 @@ const localeOptions = [
   { label: 'Español', value: 'es-AR' },
 ] as const
 
+const collapsed = computed(() => ui.sidebarCollapsed)
+
 const navItems = computed(() => [
-  { label: t('app.nav.overview'), to: '/overview' },
-  { label: t('app.nav.models'), to: '/models' },
-  { label: t('app.nav.proxy'), to: '/proxy' },
-  { label: t('app.nav.sessions'), to: '/sessions' },
-  { label: t('app.nav.monitoring'), to: '/monitoring' },
-  { label: t('app.nav.logs'), to: '/logs' },
-  { label: t('app.nav.contact'), to: '/contact' },
+  { label: t('app.nav.overview'), short: '◎', to: '/overview' },
+  { label: t('app.nav.models'), short: '◇', to: '/models' },
+  { label: t('app.nav.proxy'), short: '⚙', to: '/proxy' },
+  { label: t('app.nav.sessions'), short: '☰', to: '/sessions' },
+  { label: t('app.nav.monitoring'), short: '📊', to: '/monitoring' },
+  { label: t('app.nav.logs'), short: '📋', to: '/logs' },
+  { label: t('app.nav.contact'), short: '♥', to: '/contact' },
 ])
 
 const statusLabel = computed(() => {
@@ -113,20 +115,20 @@ onMounted(async () => {
 </script>
 
 <template>
-  <aside class="sidebar">
+  <aside class="sidebar" :class="{ collapsed }">
+    <!-- Brand header -->
     <div class="sidebar-header">
-      <div class="brand">
-        <div class="brand-mark">CX</div>
-        <div class="brand-text">
-          <p>www.nettopo.com</p>
-          <div class="brand-title">
-            <strong>codex switch</strong>
-            <span class="app-version">{{ appVersion }}</span>
-          </div>
+      <div class="brand-mark">NT</div>
+      <div v-show="!collapsed" class="brand-text">
+        <p>www.nettopo.com</p>
+        <div class="brand-title">
+          <strong>codex switch</strong>
+          <span class="app-version">{{ appVersion }}</span>
         </div>
       </div>
     </div>
 
+    <!-- Navigation -->
     <nav class="nav">
       <RouterLink
         v-for="item in navItems"
@@ -134,92 +136,119 @@ onMounted(async () => {
         :to="item.to"
         class="nav-link"
         :class="{ active: route.path === item.to }"
+        :title="collapsed ? item.label : undefined"
       >
-        {{ item.label }}
+        <span class="nav-icon">{{ item.short }}</span>
+        <span v-show="!collapsed" class="nav-label">{{ item.label }}</span>
       </RouterLink>
     </nav>
 
+    <!-- Footer: all in one compact row -->
     <div class="sidebar-footer">
-      <div class="status-chip" :data-status="store.status.status">
-        <span class="status-dot" />
-        {{ statusLabel }}
-      </div>
-      <n-button
-        secondary
-        size="small"
-        :loading="updateChecking"
-        :type="updateHasUpdate ? 'warning' : undefined"
-        @click="checkUpdates(true, true)"
-      >
-        {{ updateHasUpdate ? `有更新 ${updateLatest}` : '检查更新' }}
-      </n-button>
-      <n-select
-        class="locale-select"
-        size="small"
-        :value="ui.locale"
-        :options="localeOptions"
-        @update:value="(value: string) => ui.setLocale(value)"
-      />
-      <div class="footer-actions">
-        <n-button quaternary circle size="small" @click="emit('show-help')">
-          <template #icon><span class="help-icon">?</span></template>
+      <div class="footer-row">
+        <span class="footer-status-dot" :data-status="store.status.status" />
+        <span v-show="!collapsed" class="footer-status-label">{{ statusLabel }}</span>
+
+        <div class="footer-spacer" />
+
+        <n-button
+          v-show="!collapsed && updateHasUpdate"
+          class="footer-update-btn"
+          tertiary
+          size="tiny"
+          type="warning"
+          @click="checkUpdates(true, true)"
+        >
+          {{ updateLatest }}
         </n-button>
+
         <span
-          class="debug-dot"
+          class="footer-help"
+          @click="emit('show-help')"
+          title="帮助"
+        >?</span>
+
+        <span
+          class="footer-debug"
           :class="{ active: debugMode }"
           @click="toggleDebugMode"
           :title="debugMode ? 'Debug: ON' : 'Debug: OFF'"
         />
+
+        <span
+          class="footer-collapse"
+          @click="ui.toggleSidebar()"
+          :title="collapsed ? '展开侧栏' : '收起侧栏'"
+        >{{ collapsed ? '▶' : '◁' }}</span>
       </div>
+
+      <n-select
+        v-show="!collapsed"
+        class="locale-select"
+        size="tiny"
+        :value="ui.locale"
+        :options="localeOptions"
+        @update:value="(value: string) => ui.setLocale(value)"
+      />
     </div>
   </aside>
 </template>
 
 <style scoped>
+/* ---- Base sidebar ---- */
 .sidebar {
   display: flex;
   flex-direction: column;
   width: 220px;
   min-width: 220px;
-  height: calc(100vh - 32px);
-  padding: 16px 12px;
-  gap: 4px;
+  height: 100vh;
+  padding: 14px 10px;
+  gap: 2px;
   background: var(--bg-elevated);
   border-right: 1px solid var(--border);
   backdrop-filter: blur(18px);
+  transition: width 200ms ease, min-width 200ms ease;
+  overflow: hidden;
 }
 
+.sidebar.collapsed {
+  width: 52px;
+  min-width: 52px;
+}
+
+/* ---- Brand header ---- */
 .sidebar-header {
-  display: flex;
-  align-items: flex-start;
-  padding-bottom: 12px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-}
-
-.brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
 }
 
 .brand-mark {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 10px;
   background: linear-gradient(135deg, rgba(22, 119, 255, 0.16), rgba(19, 194, 194, 0.14));
   color: var(--accent);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   flex-shrink: 0;
 }
 
+.brand-text {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .brand-text p {
-  margin: 0 0 2px;
-  font-size: 10px;
+  margin: 0 0 1px;
+  font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
@@ -232,34 +261,37 @@ onMounted(async () => {
 }
 
 .brand-title strong {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text);
 }
 
 .app-version {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--muted);
   letter-spacing: 0.04em;
 }
 
+/* ---- Navigation ---- */
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 6px 0;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  border-radius: 10px;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
   color: var(--muted);
   font-size: 13px;
   text-decoration: none;
   transition: background 160ms ease, color 160ms ease;
+  white-space: nowrap;
 }
 
 .nav-link:hover,
@@ -268,82 +300,117 @@ onMounted(async () => {
   color: var(--text);
 }
 
-.sidebar-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
-.status-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 12px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(11, 18, 32, 0.34);
+.nav-icon {
+  font-size: 15px;
+  width: 20px;
+  text-align: center;
   flex-shrink: 0;
 }
 
-.status-chip[data-status='running'] .status-dot {
-  background: var(--accent-2);
+.nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.status-chip[data-status='starting'] .status-dot {
-  background: var(--warning);
+/* ---- Footer ---- */
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
-.status-chip[data-status='error'] .status-dot {
-  background: var(--danger);
-}
-
-.locale-select {
-  width: 100%;
-}
-
-.footer-actions {
+.footer-row {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.help-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
+/* Status dot */
+.footer-status-dot {
+  width: 7px;
+  min-width: 7px;
+  height: 7px;
   border-radius: 50%;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent);
-  cursor: pointer;
+  background: rgba(11, 18, 32, 0.34);
+  flex-shrink: 0;
+}
+.footer-status-dot[data-status='running'] { background: var(--accent-2); }
+.footer-status-dot[data-status='starting'] { background: var(--warning); }
+.footer-status-dot[data-status='error'] { background: var(--danger); }
+
+.footer-status-label {
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
 }
 
-.debug-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(11, 18, 32, 0.18);
-  cursor: pointer;
-  transition: background 200ms ease;
+.footer-spacer {
+  flex: 1;
+  min-width: 4px;
+}
+
+.footer-update-btn {
   flex-shrink: 0;
 }
 
-.debug-dot.active {
+/* Help button */
+.footer-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 160ms ease;
+}
+.footer-help:hover {
+  background: rgba(22, 119, 255, 0.1);
+}
+
+/* Debug dot */
+.footer-debug {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(11, 18, 32, 0.18);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 200ms ease;
+}
+.footer-debug.active {
   background: var(--accent);
-  box-shadow: 0 0 6px var(--accent);
+  box-shadow: 0 0 5px var(--accent);
+}
+
+/* Collapse toggle */
+.footer-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 4px;
+  transition: background 160ms ease, color 160ms ease;
+}
+.footer-collapse:hover {
+  background: rgba(11, 18, 32, 0.06);
+  color: var(--text);
+}
+
+/* Locale */
+.locale-select {
+  width: 100%;
 }
 </style>
