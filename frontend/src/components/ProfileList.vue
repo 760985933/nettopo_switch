@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
@@ -55,12 +55,30 @@ function handleEdit(id: string) {
   emit('edit', id)
 }
 
+// ── Delete confirmation ──
+const deleteConfirmId = ref<string | null>(null)
+const deleteTargetName = computed(() => {
+  if (!deleteConfirmId.value) return ''
+  return props.profiles.find(p => p.id === deleteConfirmId.value)?.name ?? ''
+})
+
 function handleDelete(id: string) {
   if (store.profileList.length < 2) {
     message.warning(t('profile.cannotDeleteLast'))
     return
   }
-  emit('delete', id)
+  deleteConfirmId.value = id
+}
+
+function confirmDelete() {
+  if (deleteConfirmId.value) {
+    emit('delete', deleteConfirmId.value)
+  }
+  deleteConfirmId.value = null
+}
+
+function cancelDelete() {
+  deleteConfirmId.value = null
 }
 </script>
 
@@ -90,7 +108,8 @@ function handleDelete(id: string) {
         <div class="profile-item-right">
           <div v-if="usageData[profile.id]" class="profile-item-usage" @click.stop>
             <template v-if="usageData[profile.id]?.error">
-              <span class="usage-error">{{ usageData[profile.id]?.error }}</span>
+              <span class="usage-error-icon">!</span>
+              <span class="usage-error" :title="usageData[profile.id]?.error">{{ usageData[profile.id]?.error }}</span>
             </template>
             <template v-else>
               <span>{{ t('guide.usage.available') }}: {{ usageData[profile.id]?.availableBalance }} {{ usageData[profile.id]?.currency }}</span>
@@ -138,6 +157,19 @@ function handleDelete(id: string) {
       </div>
     </div>
   </div>
+
+  <!-- Delete Confirmation Dialog -->
+  <n-modal
+    :show="deleteConfirmId !== null"
+    preset="dialog"
+    :title="t('profile.delete')"
+    :content="t('profile.confirmDelete', { name: deleteTargetName })"
+    :positive-text="t('common.delete')"
+    :negative-text="t('models.cancel')"
+    @positive-click="confirmDelete"
+    @negative-click="cancelDelete"
+    @close="cancelDelete"
+  />
 </template>
 
 <style scoped>
@@ -263,8 +295,23 @@ function handleDelete(id: string) {
 }
 
 .usage-error {
-  color: var(--muted);
-  font-size: 10px;
+  color: rgba(212, 56, 13, 0.92);
+  font-size: 11px;
   word-break: break-word;
+  line-height: 1.4;
+}
+
+.usage-error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(212, 56, 13, 0.92);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 </style>

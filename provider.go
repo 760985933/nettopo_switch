@@ -90,7 +90,7 @@ func deepseekBalanceCheck(apiKey, baseURL string) (*UsageBalance, error) {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API 返回状态 %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, fmt.Errorf("%s", upstreamError(resp.StatusCode, body))
 	}
 
 	var balanceResp struct {

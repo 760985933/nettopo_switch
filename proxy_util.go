@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -153,5 +154,132 @@ func statusToLevel(statusCode int) string {
 	default:
 		return "info"
 	}
+}
+
+// upstreamError extracts a clean message from upstream API error JSON responses.
+// Handles formats like:
+//
+//	{"error":{"message":"Authentication Fails, Your api key: ... is invalid","type":"...","param":null,"code":"..."}}
+//	{"error":{"message":"Insufficient balance","type":"...","code":"..."}}
+//	{"error":"not_found","error_description":"model not found"}
+//
+// On failure, returns the original body text cleaned up.
+func upstreamError(statusCode int, body []byte) string {
+	raw := strings.TrimSpace(string(body))
+	if raw == "" {
+		return fmt.Sprintf("API 返回状态 %d: 响应为空", statusCode)
+	}
+
+	// Try parsing different error JSON formats
+	var payload struct {
+		ErrorMsg string `json:"error"` // catch-all, also used for plain string errors
+	}
+	if err := json.Unmarshal([]byte(raw), &payload); err == nil && payload.ErrorMsg != "" {
+		// "error" was a plain string like "not_found" — try error_description
+		var desc struct {
+			Description string `json:"error_description"`
+		}
+		if err := json.Unmarshal([]byte(raw), &desc); err == nil && desc.Description != "" {
+			return cleanErrorMessage(desc.Description)
+		}
+	}
+
+	// {"error":{"message":"..."}}
+	var structured struct {
+		Err struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(raw), &structured); err == nil && structured.Err.Message != "" {
+		return cleanErrorMessage(structured.Err.Message)
+	}
+
+	// Check for non-JSON or unknown format — return a shortened form
+	if !strings.HasPrefix(raw, "{") {
+		return fmt.Sprintf("API 返回状态 %d: %s", statusCode, truncateForLog(raw, 200))
+	}
+
+	// JSON but unrecognized structure — extract what we can
+	var anyMap map[string]any
+	if err := json.Unmarshal([]byte(raw), &anyMap); err == nil {
+		if msg, ok := anyMap["error_description"].(string); ok && msg != "" {
+			return cleanErrorMessage(msg)
+		}
+		if msg, ok := anyMap["error"].(string); ok && msg != "" {
+			return cleanErrorMessage(msg)
+		}
+		if msg, ok := anyMap["message"].(string); ok && msg != "" {
+			return cleanErrorMessage(msg)
+		}
+	}
+
+	// Fall back to shortened raw response
+	short := truncateForLog(raw, 300)
+	return fmt.Sprintf("API 返回状态 %d: %s", statusCode, short)
+}
+
+// cleanErrorMessage sanitizes an extracted API error message.
+func cleanErrorMessage(msg string) string {
+	msg = strings.TrimSpace(msg)
+	msg = strings.ReplaceAll(msg, "\n", " ")
+	msg = strings.ReplaceAll(msg, "\r", " ")
+	// Mask potential API keys in the message (e.g. "Your api key: sk-1234" or "key 'sk-...'")
+	msg = maskAPIKey(msg)
+	// Limit length
+	if len(msg) > 300 {
+		msg = msg[:300] + "..."
+	}
+	return msg
+}
+
+// maskAPIKey replaces common API key patterns in error messages.
+func maskAPIKey(msg string) string {
+	// Match patterns like "api key: sk-xxx", "key 'sk-...'", "apikey=sk-xxx"
+	patterns := []struct {
+		prefix string
+		suffix string
+	}{
+		{"api key: ", ""},
+		{"api key ", ""},
+		{"key: ", ""},
+		{"key '", "'"},
+		{"apikey: ", ""},
+		{"apikey ", ""},
+		{"api_key: ", ""},
+	}
+	lower := strings.ToLower(msg)
+	for _, p := range patterns {
+		idx := strings.Index(lower, p.prefix)
+		if idx < 0 {
+			continue
+		}
+		start := idx + len(p.prefix)
+		var end int
+		if p.suffix != "" {
+			end = strings.Index(msg[start:], p.suffix)
+			if end < 0 {
+				continue
+			}
+			end = start + end + len(p.suffix)
+		} else {
+			// up to next space, quote, or end
+			remain := msg[start:]
+			spaceIdx := strings.IndexAny(remain, " \"'.,;:!?)\n\r")
+			if spaceIdx > 0 {
+				end = start + spaceIdx
+			} else if strings.TrimSpace(remain) != "" {
+				end = len(msg)
+			} else {
+				continue
+			}
+		}
+		keyPart := msg[start:end]
+		if len(keyPart) > 3 {
+			masked := keyPart[:max(1, len(keyPart)/4)] + strings.Repeat("*", len(keyPart)-max(1, len(keyPart)/4))
+			msg = msg[:start] + masked + msg[end:]
+		}
+		break
+	}
+	return msg
 }
 

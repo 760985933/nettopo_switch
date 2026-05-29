@@ -236,7 +236,7 @@ func (b *ProxyRuntime) CheckUpstream(cfg AppConfig) error {
 
 	if resp.StatusCode >= http.StatusBadRequest {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("上游返回 %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf("%s", upstreamError(resp.StatusCode, body))
 	}
 
 	return nil
@@ -561,12 +561,7 @@ func (b *ProxyRuntime) handleResponses(w http.ResponseWriter, r *http.Request) {
 
 		if resp.StatusCode >= http.StatusBadRequest {
 			raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
-			msg := strings.TrimSpace(string(raw))
-			if msg == "" {
-				msg = fmt.Sprintf("上游返回 %d", resp.StatusCode)
-			} else {
-				msg = fmt.Sprintf("上游返回 %d: %s", resp.StatusCode, msg)
-			}
+			msg := upstreamError(resp.StatusCode, raw)
 			b.setLastUpstreamFailure(resp.StatusCode, msg)
 			b.recordUsage(cfg, model, "responses", 0, 0, 0, resp.StatusCode, time.Since(startedAt).Milliseconds(), false)
 			b.streamResponsesFailed(w, "bad_gateway", msg)
@@ -806,12 +801,7 @@ func (b *ProxyRuntime) handleResponsesWS(w http.ResponseWriter, r *http.Request)
 
 	if resp.StatusCode >= http.StatusBadRequest {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
-		msg := strings.TrimSpace(string(raw))
-		if msg == "" {
-			msg = fmt.Sprintf("上游返回 %d", resp.StatusCode)
-		} else {
-			msg = fmt.Sprintf("上游返回 %d: %s", resp.StatusCode, msg)
-		}
+		msg := upstreamError(resp.StatusCode, raw)
 		b.setLastUpstreamFailure(resp.StatusCode, msg)
 		_ = conn.WriteJSON(map[string]any{
 			"type": "response.failed",
@@ -961,12 +951,7 @@ func (b *ProxyRuntime) handleMessages(w http.ResponseWriter, r *http.Request) {
 
 	if resp.StatusCode >= http.StatusBadRequest {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
-		msg := strings.TrimSpace(string(raw))
-		if msg == "" {
-			msg = fmt.Sprintf("上游返回 %d", resp.StatusCode)
-		} else {
-			msg = fmt.Sprintf("上游返回 %d: %s", resp.StatusCode, msg)
-		}
+		msg := upstreamError(resp.StatusCode, raw)
 		b.setLastUpstreamFailure(resp.StatusCode, msg)
 		if streaming {
 			b.streamMessagesError(w, "bad_gateway", msg)
@@ -1086,7 +1071,7 @@ func (b *ProxyRuntime) doUpstream(req *http.Request, cfg AppConfig, streaming bo
 		} else if resp.StatusCode >= http.StatusInternalServerError && attempt < attempts {
 			io.Copy(io.Discard, io.LimitReader(resp.Body, 2048))
 			_ = resp.Body.Close()
-			lastErr = fmt.Errorf("上游返回 %d", resp.StatusCode)
+			lastErr = fmt.Errorf("API 返回状态 %d", resp.StatusCode)
 		} else {
 			return resp, nil
 		}

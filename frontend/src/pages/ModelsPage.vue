@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
+import { getProviderPreset } from '../utils/providers'
 import ModelEditorPanel from '../components/ModelEditorPanel.vue'
 import ProfileList from '../components/ProfileList.vue'
 
@@ -13,6 +14,7 @@ const { t } = useI18n()
 const showAddDialog = ref(false)
 const newProfileName = ref('')
 const newProfileProvider = ref('deepseek')
+const newProfileApiKey = ref('')
 const editingProfileId = ref<string | null>(null)
 const showEditor = ref(false)
 
@@ -34,9 +36,10 @@ const providerOptions = [
 
 async function handleAdd() {
   if (!newProfileName.value.trim()) return
-  await store.addProfile(newProfileName.value.trim(), newProfileProvider.value)
+  await store.addProfile(newProfileName.value.trim(), newProfileProvider.value, undefined, newProfileApiKey.value || undefined)
   newProfileName.value = ''
   newProfileProvider.value = 'deepseek'
+  newProfileApiKey.value = ''
   showAddDialog.value = false
   message.success(t('models.toast.added'))
 }
@@ -89,6 +92,14 @@ function handleEditorSave() {
         </n-form-item>
         <n-form-item :label="t('models.provider')">
           <n-select v-model:value="newProfileProvider" :options="providerOptions" />
+        </n-form-item>
+        <n-form-item label="API Key">
+          <n-input
+            v-model:value="newProfileApiKey"
+            type="password"
+            show-password-on="click"
+            :placeholder="getProviderPreset(newProfileProvider)?.placeholderApiKey ?? 'sk-...'"
+          />
         </n-form-item>
       </n-form>
     </n-modal>
