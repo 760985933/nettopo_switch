@@ -23,6 +23,7 @@ const (
 	ProviderTencent   ProviderID = "tencent"
 	ProviderSilicon   ProviderID = "silicon"
 	ProviderKimi      ProviderID = "kimi"
+	ProviderMiniMax   ProviderID = "minimax"
 	ProviderAnthropic ProviderID = "anthropic"
 	ProviderCustom    ProviderID = "custom"
 )
@@ -220,6 +221,17 @@ var registeredProviders = map[string]*ProviderInfo{
 		APIType:         APIChatCompletions,
 		DefaultMappings: kimiDefaultMappings(),
 	},
+	string(ProviderMiniMax): {
+		ID:              ProviderMiniMax,
+		Name:            "MiniMax 海螺",
+		DefaultBaseURL:  "https://api.minimax.io/v1",
+		DefaultModel:    "MiniMax-M2.7",
+		DocsURL:         "https://platform.minimax.io/docs",
+		HasBalanceAPI:   false,
+		BalanceCheckFn:  nil,
+		APIType:         APIChatCompletions,
+		DefaultMappings: minimaxDefaultMappings(),
+	},
 	string(ProviderAnthropic): {
 		ID:              ProviderAnthropic,
 		Name:            "Anthropic Claude",
@@ -356,6 +368,20 @@ func kimiDefaultMappings() map[string]string {
 		"gpt-4o-mini":            "kimi-k2.6",
 		"o4-mini":                "kimi-k2.6-thinking",
 		"codex-auto-review":      "kimi-k2.6",
+	}
+}
+
+func minimaxDefaultMappings() map[string]string {
+	return map[string]string{
+		"gpt-5.5":           "MiniMax-M2.7",
+		"gpt-5.4":           "MiniMax-M2.7",
+		"gpt-5.4-mini":      "MiniMax-M2.7-highspeed",
+		"gpt-5.3-codex":     "MiniMax-M2.7",
+		"gpt-4.1":           "MiniMax-M2.5",
+		"gpt-4o":            "MiniMax-M2.5",
+		"gpt-4o-mini":       "MiniMax-M2.7-highspeed",
+		"o4-mini":           "MiniMax-M2.7-highspeed",
+		"codex-auto-review": "MiniMax-M2.5",
 	}
 }
 
