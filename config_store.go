@@ -231,6 +231,16 @@ func normalizeConfig(cfg AppConfig) AppConfig {
 		}
 	}
 
+	// Migration: only seed once when the field has never been set (nil),
+	// not when the user intentionally cleared all proxy entries (empty slice).
+	if cfg.ProxyProfileIDs == nil && len(cfg.Profiles) > 0 {
+		ids := make([]string, 0, len(cfg.Profiles))
+		for id := range cfg.Profiles {
+			ids = append(ids, id)
+		}
+		cfg.ProxyProfileIDs = ids
+	}
+
 	return cfg
 }
 
