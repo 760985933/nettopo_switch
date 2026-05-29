@@ -10,19 +10,12 @@ const props = defineProps<{
   profiles: Profile[]
   currentProfileId: string
   loading: boolean
-  showLoginActions?: boolean
-  loginLoadingId?: string | null
-  loginAction?: string | null
-  completedLogins?: Record<string, string[]>
 }>()
 
 const emit = defineEmits<{
   edit: [id: string]
   delete: [id: string]
   select: [id: string]
-  pluginLogin: [id: string]
-  noAccountLogin: [id: string]
-  stopLogin: [id: string]
 }>()
 
 const store = useAppStore()
@@ -124,28 +117,7 @@ function cancelDelete() {
             </n-button>
           </div>
           <div class="profile-item-actions" @click.stop>
-            <template v-if="showLoginActions">
-              <n-button
-                size="small"
-                :type="loginLoadingId === profile.id && loginAction === 'plugin' ? 'error' : (completedLogins?.[profile.id]?.includes('plugin') ? 'success' : (profile.apiKey ? 'primary' : undefined))"
-                :disabled="!profile.apiKey || (completedLogins?.[profile.id]?.includes('plugin') && !(loginLoadingId === profile.id && loginAction === 'plugin'))"
-                :loading="false"
-                :title="loginLoadingId === profile.id && loginAction === 'plugin' ? '' : (profile.apiKey ? t('guide.actions.pluginUnlockLoginTooltip') : t('guide.monitor.noKey'))"
-                @click="loginLoadingId === profile.id && loginAction === 'plugin' ? emit('stopLogin', profile.id) : emit('pluginLogin', profile.id)"
-              >
-                {{ loginLoadingId === profile.id && loginAction === 'plugin' ? t('guide.actions.stop') : (completedLogins?.[profile.id]?.includes('plugin') ? t('guide.actions.completed') : t('guide.actions.pluginUnlockLogin')) }}
-              </n-button>
-              <n-button
-                size="small"
-                :type="loginLoadingId === profile.id && loginAction === 'noaccount' ? 'error' : (completedLogins?.[profile.id]?.includes('noaccount') ? 'success' : (profile.apiKey ? 'primary' : undefined))"
-                :disabled="!profile.apiKey || (completedLogins?.[profile.id]?.includes('noaccount') && !(loginLoadingId === profile.id && loginAction === 'noaccount'))"
-                :loading="false"
-                @click="loginLoadingId === profile.id && loginAction === 'noaccount' ? emit('stopLogin', profile.id) : emit('noAccountLogin', profile.id)"
-              >
-                {{ loginLoadingId === profile.id && loginAction === 'noaccount' ? t('guide.actions.stop') : (completedLogins?.[profile.id]?.includes('noaccount') ? t('guide.actions.completed') : t('guide.actions.noAccountLogin')) }}
-              </n-button>
-              <span class="actions-sep">|</span>
-            </template>
+            <slot name="actions" :profile="profile" />
             <n-button size="small" tertiary @click="handleEdit(profile.id)">
               {{ t('guide.step.one.edit') }}
             </n-button>

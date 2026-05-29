@@ -406,3 +406,22 @@ func TryPluginUnlock(logFn func(level, source, msg, requestID string)) error {
 	}
 	return fmt.Errorf("所有目标注入失败: %w", lastErr)
 }
+
+// PluginUnlockLogin writes the Codex config in openai-direct format and then
+// injects the plugin unlock script via CDP. It requires the proxy to be
+// running (internet access needed for upstream API calls).
+func (a *App) PluginUnlockLogin() (string, error) {
+	path, err := a.WriteCodexConfigToml()
+	if err != nil {
+		return "", err
+	}
+
+	// CDP injection disabled for now
+	// go func() {
+	// 	if err := TryPluginUnlock(a.appendLog); err != nil {
+	// 		a.appendLog("warn", "plugin", "插件解锁失败: "+err.Error(), "")
+	// 	}
+	// }()
+
+	return path, nil
+}

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { ClipboardSetText } from '../../wailsjs/runtime/runtime'
 import type { AppConfig } from '../types'
 import { useAppStore } from '../stores/app'
+import { useCodexStore } from '../stores/codex'
 import { useUiStore } from '../stores/ui'
 
 const props = defineProps<{
@@ -18,6 +19,7 @@ const emit = defineEmits<{
 
 const localConfig = ref<AppConfig>({ ...props.config })
 const store = useAppStore()
+const codexStore = useCodexStore()
 const ui = useUiStore()
 const message = useMessage()
 const dialog = useDialog()
@@ -91,7 +93,7 @@ async function handleExport() {
 
 async function handleCodexCopy() {
   try {
-    const content = await store.generateCodexConfigToml()
+    const content = await codexStore.generateCodexConfigToml()
     await ClipboardSetText(content)
     message.success(t('app.toast.codexTomlCopied'))
   } catch (error) {
@@ -105,8 +107,8 @@ async function handleCodexCopy() {
 
 async function handleCodexWrite() {
   try {
-    const path = await store.writeCodexConfigToml()
-    const hintPath = await store.getCodexConfigPath()
+    const path = await codexStore.writeCodexConfigToml()
+    const hintPath = await codexStore.getCodexConfigPath()
     message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
   } catch (error) {
     dialog.warning({
@@ -119,8 +121,8 @@ async function handleCodexWrite() {
 
 async function handleCodexWriteProfiles() {
   try {
-    const path = await store.writeCodexConfigTomlProfiles()
-    const hintPath = await store.getCodexConfigPath()
+    const path = await codexStore.writeCodexConfigTomlProfiles()
+    const hintPath = await codexStore.getCodexConfigPath()
     message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
   } catch (error) {
     dialog.warning({
@@ -134,8 +136,8 @@ async function handleCodexWriteProfiles() {
 async function loadCodexRaw() {
   codexBusy.value = true
   try {
-    codexPath.value = await store.getCodexConfigPath()
-    codexRaw.value = await store.readCodexConfigToml()
+    codexPath.value = await codexStore.getCodexConfigPath()
+    codexRaw.value = await codexStore.readCodexConfigToml()
     await refreshCodexBackups()
   } catch (error) {
     message.error(error instanceof Error ? error.message : String(error))
@@ -145,7 +147,7 @@ async function loadCodexRaw() {
 }
 
 async function refreshCodexBackups() {
-  codexBackups.value = await store.listCodexConfigBackups()
+  codexBackups.value = await codexStore.listCodexConfigBackups()
   if (selectedBackup.value && !codexBackups.value.includes(selectedBackup.value)) {
     selectedBackup.value = ''
   }
@@ -154,7 +156,7 @@ async function refreshCodexBackups() {
 async function generateCodexRaw() {
   codexBusy.value = true
   try {
-    codexRaw.value = await store.generateCodexConfigToml()
+    codexRaw.value = await codexStore.generateCodexConfigToml()
     message.success(t('settings.toast.generatedToml'))
   } catch (error) {
     message.error(error instanceof Error ? error.message : String(error))
@@ -166,7 +168,7 @@ async function generateCodexRaw() {
 async function saveCodexRaw() {
   codexBusy.value = true
   try {
-    const path = await store.writeCodexConfigTomlRaw(codexRaw.value)
+    const path = await codexStore.writeCodexConfigTomlRaw(codexRaw.value)
     message.success(t('settings.toast.saved', { path: path || codexPath.value }))
   } catch (error) {
     message.error(error instanceof Error ? error.message : String(error))
@@ -178,7 +180,7 @@ async function saveCodexRaw() {
 async function mergeWriteCodex() {
   codexBusy.value = true
   try {
-    const path = await store.writeCodexConfigToml()
+    const path = await codexStore.writeCodexConfigToml()
     message.success(t('settings.toast.mergedWritten', { path: path || codexPath.value }))
     await loadCodexRaw()
   } catch (error) {
@@ -197,7 +199,7 @@ async function restoreCodex() {
     onPositiveClick: async () => {
       codexBusy.value = true
       try {
-        const path = await store.restoreCodexConfigToml()
+        const path = await codexStore.restoreCodexConfigToml()
         message.success(t('settings.toast.restored', { path: path || codexPath.value }))
         await loadCodexRaw()
       } catch (error) {
@@ -216,7 +218,7 @@ async function restoreSelectedBackup() {
   }
   codexBusy.value = true
   try {
-    const path = await store.restoreCodexConfigTomlFromBackup(selectedBackup.value)
+    const path = await codexStore.restoreCodexConfigTomlFromBackup(selectedBackup.value)
     message.success(t('settings.toast.restored', { path: path || codexPath.value }))
     await loadCodexRaw()
   } catch (error) {
@@ -239,7 +241,7 @@ async function deleteSelectedBackup() {
     onPositiveClick: async () => {
       codexBusy.value = true
       try {
-        await store.deleteCodexConfigBackup(selectedBackup.value)
+        await codexStore.deleteCodexConfigBackup(selectedBackup.value)
         selectedBackup.value = ''
         await refreshCodexBackups()
         message.success(t('settings.toast.deletedBackup'))
@@ -261,7 +263,7 @@ async function clearAllBackups() {
     onPositiveClick: async () => {
       codexBusy.value = true
       try {
-        const removed = await store.clearCodexConfigBackups()
+        const removed = await codexStore.clearCodexConfigBackups()
         selectedBackup.value = ''
         await refreshCodexBackups()
         message.success(t('settings.toast.clearedBackups', { count: removed }))

@@ -1,33 +1,18 @@
 import { defineStore } from 'pinia'
 import {
-  ClearCodexConfigBackups,
-  DeleteCodexConfigBackup,
   ExportConfig,
-  GenerateCodexConfigToml,
-  GenerateCodexConfigTomlProfiles,
   GetAppConfig,
   GetProxyStatus,
-  GetCodexConfigPath,
   GetLogHistory,
   GetOverviewSnapshot,
   GetUsageStats,
-  GetSandboxConfig,
   ImportConfig,
-  ListCodexConfigBackups,
-  PluginUnlockLogin,
   RestartProxy,
-  ReadCodexConfigToml,
   RunHealthCheck,
-  RestoreCodexConfigTomlFromBackup,
-  RestoreCodexConfigToml,
   SaveAppConfig,
   SetCurrentProfile,
-  SetSandboxConfig,
   StartProxy,
   StopProxy,
-  WriteCodexConfigTomlRaw,
-  WriteCodexConfigToml,
-  WriteCodexConfigTomlProfiles,
 } from '../../wailsjs/go/main/App'
 import type {
   AppConfig,
@@ -36,7 +21,6 @@ import type {
   HealthCheckResult,
   LogEntry,
   OverviewSnapshot,
-  SandboxWorkspaceConfig,
   UsageStatsResponse,
 } from '../types'
 import { getDefaultProviderPreset, getProviderPreset } from '../utils/providers'
@@ -157,51 +141,6 @@ export const useAppStore = defineStore('app', {
     async importConfig(payload: string) {
       this.config = (await ImportConfig(payload)) as AppConfig
       return this.config
-    },
-    async generateCodexConfigToml() {
-      return GenerateCodexConfigToml()
-    },
-    async writeCodexConfigToml() {
-      return WriteCodexConfigToml()
-    },
-    async writeCodexConfigTomlProfiles() {
-      return WriteCodexConfigTomlProfiles()
-    },
-    async generateCodexConfigTomlProfiles() {
-      return GenerateCodexConfigTomlProfiles()
-    },
-    async pluginUnlockLogin() {
-      return PluginUnlockLogin()
-    },
-    async getCodexConfigPath() {
-      return GetCodexConfigPath()
-    },
-    async restoreCodexConfigToml() {
-      return RestoreCodexConfigToml()
-    },
-    async listCodexConfigBackups() {
-      return ListCodexConfigBackups()
-    },
-    async deleteCodexConfigBackup(backupPath: string) {
-      return DeleteCodexConfigBackup(backupPath)
-    },
-    async clearCodexConfigBackups() {
-      return ClearCodexConfigBackups()
-    },
-    async restoreCodexConfigTomlFromBackup(backupPath: string) {
-      return RestoreCodexConfigTomlFromBackup(backupPath)
-    },
-    async readCodexConfigToml() {
-      return ReadCodexConfigToml()
-    },
-    async writeCodexConfigTomlRaw(content: string) {
-      return WriteCodexConfigTomlRaw(content)
-    },
-    async getSandboxConfig(): Promise<SandboxWorkspaceConfig> {
-      return GetSandboxConfig()
-    },
-    async setSandboxConfig(cfg: SandboxWorkspaceConfig): Promise<SandboxWorkspaceConfig> {
-      return SetSandboxConfig(cfg)
     },
     async setCurrentProfile(id: string) {
       this.config = (await SetCurrentProfile(id)) as AppConfig

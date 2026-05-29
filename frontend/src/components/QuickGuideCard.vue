@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -9,6 +9,7 @@ import { getProviderPreset } from '../utils/providers'
 import ProfileList from './ProfileList.vue'
 import ModelEditorPanel from './ModelEditorPanel.vue'
 import ProxySettingsPanel from './ProxySettingsPanel.vue'
+import CodexLoginActions from './CodexLoginActions.vue'
 import type { ProxyStatusPayload, HealthCheckResult } from '../types'
 
 const emit = defineEmits<{
@@ -115,82 +116,6 @@ function handleEditorSave() {
   showEditor.value = false
   editingProfileId.value = null
 }
-
-// ── Login actions ──
-const activeLoginAction = ref<'plugin' | 'noaccount' | null>(null)
-const loginProfileId = ref<string | null>(null)
-const completedLogins = reactive<Record<string, string[]>>({})
-
-function handleStopLogin(id: string) {
-  if (loginProfileId.value !== id) return
-  loginProfileId.value = null
-  activeLoginAction.value = null
-  message.info(t('guide.actions.stopped'))
-}
-
-async function handlePluginLogin(id: string) {
-  const profile = store.config.profiles[id]
-  if (!profile?.apiKey) {
-    message.warning(t('guide.monitor.noKey'))
-    return
-  }
-  loginProfileId.value = id
-  activeLoginAction.value = 'plugin'
-  try {
-    if (id !== store.config.currentProfileId) {
-      await store.setCurrentProfile(id)
-    }
-    if (!store.isRunning) await store.startProxy()
-    const path = await store.pluginUnlockLogin()
-    if (loginProfileId.value !== id || activeLoginAction.value !== 'plugin') return
-    const hintPath = await store.getCodexConfigPath()
-    if (!completedLogins[id]) completedLogins[id] = []
-    if (!completedLogins[id].includes('plugin')) completedLogins[id].push('plugin')
-    if (!completedLogins[id].includes('noaccount')) completedLogins[id].push('noaccount')
-    message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
-  } catch (error) {
-    if (loginProfileId.value === id && activeLoginAction.value === 'plugin') {
-      message.error(error instanceof Error ? error.message : String(error))
-    }
-  } finally {
-    if (loginProfileId.value === id && activeLoginAction.value === 'plugin') {
-      loginProfileId.value = null
-      activeLoginAction.value = null
-    }
-  }
-}
-
-async function handleNoAccountLogin(id: string) {
-  const profile = store.config.profiles[id]
-  if (!profile?.apiKey) {
-    message.warning(t('guide.monitor.noKey'))
-    return
-  }
-  loginProfileId.value = id
-  activeLoginAction.value = 'noaccount'
-  try {
-    if (id !== store.config.currentProfileId) {
-      await store.setCurrentProfile(id)
-    }
-    if (!store.isRunning) await store.startProxy()
-    const path = await store.writeCodexConfigTomlProfiles()
-    if (loginProfileId.value !== id || activeLoginAction.value !== 'noaccount') return
-    const hintPath = await store.getCodexConfigPath()
-    if (!completedLogins[id]) completedLogins[id] = []
-    if (!completedLogins[id].includes('noaccount')) completedLogins[id].push('noaccount')
-    if (!completedLogins[id].includes('plugin')) completedLogins[id].push('plugin')
-    message.success(t('app.toast.codexTomlWritten', { path: path || hintPath }))
-  } catch (error) {
-    if (loginProfileId.value === id && activeLoginAction.value === 'noaccount') {
-      message.error(error instanceof Error ? error.message : String(error))
-    }
-  } finally {
-    if (loginProfileId.value === id && activeLoginAction.value === 'noaccount') {
-      loginProfileId.value = null
-      activeLoginAction.value = null
-    }
-  }
-}
 </script>
 
 <template>
@@ -213,17 +138,14 @@ async function handleNoAccountLogin(id: string) {
         :profiles="store.profileList"
         :current-profile-id="store.config.currentProfileId"
         :loading="store.isBusy"
-        :login-loading-id="loginProfileId"
-        :login-action="activeLoginAction"
-        :completed-logins="completedLogins"
-        show-login-actions
         @edit="handleEdit"
         @delete="handleDelete"
         @select="store.setCurrentProfile"
-        @plugin-login="handlePluginLogin"
-        @no-account-login="handleNoAccountLogin"
-        @stop-login="handleStopLogin"
-      />
+      >
+        <template #actions="{ profile }">
+          <CodexLoginActions :profile-id="profile.id" />
+        </template>
+      </ProfileList>
 
     </div>
 
