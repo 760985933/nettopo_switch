@@ -857,9 +857,15 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 			if role == "assistant" {
 				reasoning = strings.TrimSpace(extractResponsesReasoningContent(msg))
 			}
-			contentStr, _ := content.(string)
-			if strings.TrimSpace(contentStr) == "" && reasoning == "" {
+			contentStr, isStr := content.(string)
+			if isStr && strings.TrimSpace(contentStr) == "" && reasoning == "" {
 				continue
+			}
+			// content 是数组（含图片等媒体）时，即使 reasoning 为空也保留
+			if !isStr {
+				if contentArr, ok := content.([]any); ok && len(contentArr) == 0 && reasoning == "" {
+					continue
+				}
 			}
 			chatMsg := map[string]any{"role": role, "content": content}
 			if role == "assistant" && reasoning != "" {
@@ -878,8 +884,8 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 		if role == "assistant" {
 			reasoning = strings.TrimSpace(extractResponsesReasoningContent(typed))
 		}
-		s, _ := content.(string)
-		if strings.TrimSpace(s) != "" || reasoning != "" {
+		s, isStr := content.(string)
+		if (isStr && strings.TrimSpace(s) != "") || reasoning != "" || !isStr {
 			chatMsg := map[string]any{"role": role, "content": content}
 			if role == "assistant" && reasoning != "" {
 				chatMsg["reasoning_content"] = reasoning
