@@ -136,7 +136,7 @@ async function submitSave() {
             </n-button>
           </div>
         </n-form-item>
-        <n-form-item label="API 格式">
+        <n-form-item label="API 格式" class="span-2">
           <n-select
             v-model:value="formProfile.apiType"
             :options="apiTypeOptions"
