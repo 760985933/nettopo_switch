@@ -202,6 +202,34 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class ModelStats {
+	    provider: string;
+	    model: string;
+	    requestCount: number;
+	    successCount: number;
+	    failureCount: number;
+	    totalTokens: number;
+	    promptTokens: number;
+	    completionTokens: number;
+	    avgDurationMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ModelStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.provider = source["provider"];
+	        this.model = source["model"];
+	        this.requestCount = source["requestCount"];
+	        this.successCount = source["successCount"];
+	        this.failureCount = source["failureCount"];
+	        this.totalTokens = source["totalTokens"];
+	        this.promptTokens = source["promptTokens"];
+	        this.completionTokens = source["completionTokens"];
+	        this.avgDurationMs = source["avgDurationMs"];
+	    }
+	}
 	export class ProxyStatusPayload {
 	    status: string;
 	    listenAddress: string;
@@ -506,6 +534,26 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class TimeSeriesPoint {
+	    date: string;
+	    totalTokens: number;
+	    promptTokens: number;
+	    completionTokens: number;
+	    requestCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TimeSeriesPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.date = source["date"];
+	        this.totalTokens = source["totalTokens"];
+	        this.promptTokens = source["promptTokens"];
+	        this.completionTokens = source["completionTokens"];
+	        this.requestCount = source["requestCount"];
+	    }
+	}
 	export class UpdateCheckResult {
 	    currentVersion: string;
 	    latestVersion: string;
@@ -579,6 +627,8 @@ export namespace main {
 	    thisWeek: UsageStats[];
 	    thisMonth: UsageStats[];
 	    thisYear: UsageStats[];
+	    models: ModelStats[];
+	    timeSeries: TimeSeriesPoint[];
 	
 	    static createFrom(source: any = {}) {
 	        return new UsageStatsResponse(source);
@@ -590,6 +640,8 @@ export namespace main {
 	        this.thisWeek = this.convertValues(source["thisWeek"], UsageStats);
 	        this.thisMonth = this.convertValues(source["thisMonth"], UsageStats);
 	        this.thisYear = this.convertValues(source["thisYear"], UsageStats);
+	        this.models = this.convertValues(source["models"], ModelStats);
+	        this.timeSeries = this.convertValues(source["timeSeries"], TimeSeriesPoint);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

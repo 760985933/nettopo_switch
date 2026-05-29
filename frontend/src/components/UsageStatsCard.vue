@@ -27,149 +27,141 @@ const tokenPercentage = computed(() => {
   }
 })
 
-const isActive = computed(() => {
-  return props.stats.requestCount > 0
-})
-
 const avgTokensPerRequest = computed(() => {
   if (props.stats.requestCount === 0) return 0
   return Math.round(props.stats.totalTokens / props.stats.requestCount)
 })
+
+const rateTagType = computed(() => {
+  if (successRate.value >= 95) return 'success'
+  if (successRate.value >= 80) return 'warning'
+  return 'error'
+})
 </script>
 
 <template>
-  <n-card class="stats-card" :class="{ inactive: !isActive }" :bordered="true" size="small">
-    <div class="stats-header">
-      <div class="provider-label">{{ providerInfo.label }}</div>
-      <n-tag v-if="stats.failureCount > 0" :type="successRate >= 90 ? 'success' : successRate >= 70 ? 'warning' : 'error'" size="small">
+  <n-card class="usage-card" :bordered="true" size="small">
+    <div class="card-top">
+      <div class="provider-name">{{ providerInfo.label }}</div>
+      <n-tag :type="rateTagType" size="small" :bordered="false">
         {{ successRate }}%
       </n-tag>
-      <n-tag v-else type="success" size="small">100%</n-tag>
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-item">
-        <span class="stat-value">{{ stats.requestCount }}</span>
-        <span class="stat-label">{{ $t('monitoring.requestCount') }}</span>
+    <div class="metrics-row">
+      <div class="metric">
+        <span class="metric-val">{{ stats.requestCount }}</span>
+        <span class="metric-lbl">{{ $t('monitoring.requestCount') }}</span>
       </div>
-      <div class="stat-item">
-        <span class="stat-value success">{{ stats.successCount }}</span>
-        <span class="stat-label">{{ $t('monitoring.successCount') }}</span>
+      <div class="metric">
+        <span class="metric-val ok">{{ stats.successCount }}</span>
+        <span class="metric-lbl">{{ $t('monitoring.successCount') }}</span>
       </div>
-      <div class="stat-item">
-        <span class="stat-value failure">{{ stats.failureCount }}</span>
-        <span class="stat-label">{{ $t('monitoring.failureCount') }}</span>
+      <div class="metric">
+        <span class="metric-val fail">{{ stats.failureCount }}</span>
+        <span class="metric-lbl">{{ $t('monitoring.failureCount') }}</span>
       </div>
-      <div class="stat-item">
-        <span class="stat-value">{{ stats.avgDurationMs.toFixed(0) }}<small>{{ $t('monitoring.ms') }}</small></span>
-        <span class="stat-label">{{ $t('monitoring.avgDuration') }}</span>
+      <div class="metric">
+        <span class="metric-val">{{ stats.avgDurationMs.toFixed(0) }}<small>ms</small></span>
+        <span class="metric-lbl">{{ $t('monitoring.avgDuration') }}</span>
       </div>
     </div>
 
-    <div v-if="stats.totalTokens > 0" class="tokens-section">
-      <div class="tokens-header">
-        <span class="tokens-label">{{ $t('monitoring.tokens') }}</span>
-        <span class="tokens-total">{{ stats.totalTokens.toLocaleString() }}</span>
+    <div v-if="stats.totalTokens > 0" class="token-section">
+      <div class="token-head">
+        <span>{{ $t('monitoring.totalTokens') }}</span>
+        <strong>{{ stats.totalTokens.toLocaleString() }}</strong>
       </div>
       <div class="token-bar">
         <div
-          class="token-bar-prompt"
+          class="tok-fill prompt"
           :style="{ width: tokenPercentage.prompt + '%' }"
-          :title="$t('monitoring.promptTokens') + ': ' + stats.promptTokens.toLocaleString()"
         />
         <div
-          class="token-bar-completion"
+          class="tok-fill completion"
           :style="{ width: tokenPercentage.completion + '%' }"
-          :title="$t('monitoring.completionTokens') + ': ' + stats.completionTokens.toLocaleString()"
         />
       </div>
-      <div class="token-details">
-        <span class="token-detail">
-          <span class="dot prompt" /> {{ $t('monitoring.promptTokens') }}: <strong>{{ stats.promptTokens.toLocaleString() }}</strong>
+      <div class="token-foot">
+        <span class="tok-info">
+          <span class="dot prompt"/> {{ $t('monitoring.promptTokens') }} <strong>{{ stats.promptTokens.toLocaleString() }}</strong>
         </span>
-        <span class="token-detail">
-          <span class="dot completion" /> {{ $t('monitoring.completionTokens') }}: <strong>{{ stats.completionTokens.toLocaleString() }}</strong>
+        <span class="tok-info">
+          <span class="dot completion"/> {{ $t('monitoring.completionTokens') }} <strong>{{ stats.completionTokens.toLocaleString() }}</strong>
         </span>
-        <span class="token-detail avg-tokens">
-          {{ $t('monitoring.avgTokensPerRequest') }}: <strong>{{ avgTokensPerRequest.toLocaleString() }}</strong>
-        </span>
+        <span class="tok-avg">{{ $t('monitoring.avgTokensPerRequest') }} <strong>{{ avgTokensPerRequest.toLocaleString() }}</strong></span>
       </div>
+    </div>
+
+    <div v-else class="token-none">
+      {{ $t('monitoring.noData') }}
     </div>
   </n-card>
 </template>
 
 <style scoped>
-.stats-card {
+.usage-card {
   border-radius: 12px;
-  transition: opacity 0.2s;
 }
-.stats-card.inactive {
-  opacity: 0.5;
-}
-.stats-header {
+.card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
-.provider-label {
-  font-weight: 600;
+.provider-name {
+  font-weight: 700;
   font-size: 15px;
   color: var(--text);
 }
-.stats-grid {
+.metrics-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 14px;
 }
-.stat-item {
+.metric {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
-.stat-value {
-  font-size: 20px;
+.metric-val {
+  font-size: 18px;
   font-weight: 700;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
-.stat-value.success {
-  color: var(--accent-2);
-}
-.stat-value.failure {
-  color: var(--danger);
-}
-.stat-value small {
-  font-size: 12px;
+.metric-val small {
+  font-size: 11px;
   font-weight: 400;
   color: var(--muted);
-  margin-left: 2px;
+  margin-left: 1px;
 }
-.stat-label {
-  font-size: 11px;
+.metric-val.ok { color: #52c41a; }
+.metric-val.fail { color: #ff4d4f; }
+.metric-lbl {
+  font-size: 10px;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.tokens-section {
+
+.token-section {
   border-top: 1px solid var(--border);
   padding-top: 12px;
 }
-.tokens-header {
+.token-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
-}
-.tokens-label {
   font-size: 12px;
   color: var(--muted);
 }
-.tokens-total {
-  font-size: 14px;
-  font-weight: 600;
+.token-head strong {
   color: var(--text);
+  font-size: 14px;
 }
 .token-bar {
   display: flex;
@@ -179,43 +171,46 @@ const avgTokensPerRequest = computed(() => {
   background: var(--border);
   margin-bottom: 8px;
 }
-.token-bar-prompt {
-  background: #1677ff;
-  transition: width 0.3s;
-}
-.token-bar-completion {
-  background: #13c2c2;
-  transition: width 0.3s;
-}
-.token-details {
+.tok-fill.prompt { background: #1677ff; transition: width 0.3s; }
+.tok-fill.completion { background: #13c2c2; transition: width 0.3s; }
+.token-foot {
   display: flex;
   gap: 16px;
   font-size: 11px;
   color: var(--muted);
   flex-wrap: wrap;
+  align-items: center;
 }
-.token-detail {
+.tok-info {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.token-detail strong {
+.tok-info strong {
   color: var(--text);
   font-weight: 600;
 }
-.token-detail.avg-tokens {
+.tok-avg {
   margin-left: auto;
+}
+.tok-avg strong {
+  color: var(--text);
+  font-weight: 600;
 }
 .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
-.dot.prompt {
-  background: #1677ff;
-}
-.dot.completion {
-  background: #13c2c2;
+.dot.prompt { background: #1677ff; }
+.dot.completion { background: #13c2c2; }
+.token-none {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
 }
 </style>

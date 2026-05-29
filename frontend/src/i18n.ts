@@ -102,6 +102,7 @@ export const messages = {
     successRate: '成功率',
     avgDuration: '平均耗时',
     noData: '暂无统计数据',
+    noDataHint: '启动代理并发送请求后，用量数据将自动记录',
     requestCount: '请求数',
     successCount: '成功',
     failureCount: '失败',
@@ -109,7 +110,12 @@ export const messages = {
     tokenStats: 'Token 统计',
     avgTokensPerRequest: '平均 Tokens/请求',
     tokenShare: '占比',
-    promptCompletionSplit: '拆分',
+    promptCompletionSplit: '提示/生成 拆分',
+    tokenTrend: 'Token 用量趋势',
+    modelBreakdown: '模型用量分布',
+    model: '模型',
+    provider: '提供商',
+    providerBreakdown: '提供商详情',
 
   },
 
@@ -413,6 +419,7 @@ export const messages = {
     successRate: 'Success Rate',
     avgDuration: 'Avg Duration',
     noData: 'No statistics yet',
+    noDataHint: 'Start the proxy and send requests — usage data will be recorded automatically',
     requestCount: 'Requests',
     successCount: 'Success',
     failureCount: 'Failed',
@@ -420,7 +427,12 @@ export const messages = {
     tokenStats: 'Token Statistics',
     avgTokensPerRequest: 'Avg Tokens/Req',
     tokenShare: 'Share',
-    promptCompletionSplit: 'Split',
+    promptCompletionSplit: 'Prompt / Completion Split',
+    tokenTrend: 'Token Usage Trend',
+    modelBreakdown: 'Model Breakdown',
+    model: 'Model',
+    provider: 'Provider',
+    providerBreakdown: 'Provider Details',
 
   },
 

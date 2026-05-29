@@ -131,9 +131,31 @@ type UsageStats struct {
 	AvgDurationMs    float64 `json:"avgDurationMs"`
 }
 
+type ModelStats struct {
+	Provider         string  `json:"provider"`
+	Model            string  `json:"model"`
+	RequestCount     int64   `json:"requestCount"`
+	SuccessCount     int64   `json:"successCount"`
+	FailureCount     int64   `json:"failureCount"`
+	TotalTokens      int64   `json:"totalTokens"`
+	PromptTokens     int64   `json:"promptTokens"`
+	CompletionTokens int64   `json:"completionTokens"`
+	AvgDurationMs    float64 `json:"avgDurationMs"`
+}
+
+type TimeSeriesPoint struct {
+	Date             string `json:"date"`
+	TotalTokens      int64  `json:"totalTokens"`
+	PromptTokens     int64  `json:"promptTokens"`
+	CompletionTokens int64  `json:"completionTokens"`
+	RequestCount     int64  `json:"requestCount"`
+}
+
 type UsageStatsResponse struct {
-	Today     []UsageStats `json:"today"`
-	ThisWeek  []UsageStats `json:"thisWeek"`
-	ThisMonth []UsageStats `json:"thisMonth"`
-	ThisYear  []UsageStats `json:"thisYear"`
+	Today      []UsageStats      `json:"today"`
+	ThisWeek   []UsageStats      `json:"thisWeek"`
+	ThisMonth  []UsageStats      `json:"thisMonth"`
+	ThisYear   []UsageStats      `json:"thisYear"`
+	Models     []ModelStats      `json:"models"`
+	TimeSeries []TimeSeriesPoint `json:"timeSeries"`
 }

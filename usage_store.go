@@ -96,6 +96,7 @@ func (s *UsageStore) QueryStats() (UsageStatsResponse, error) {
 	weekStart := todayStart.AddDate(0, 0, -int(weekday-time.Monday))
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
 	yearStart := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, loc)
+	thirtyDaysAgo := todayStart.AddDate(0, 0, -29)
 
 	today, err := s.querySince(todayStart)
 	if err != nil {
@@ -113,11 +114,21 @@ func (s *UsageStore) QueryStats() (UsageStatsResponse, error) {
 	if err != nil {
 		return UsageStatsResponse{}, err
 	}
+	models, err := s.queryModelStats(monthStart)
+	if err != nil {
+		return UsageStatsResponse{}, err
+	}
+	ts, err := s.queryTimeSeries(thirtyDaysAgo)
+	if err != nil {
+		return UsageStatsResponse{}, err
+	}
 	return UsageStatsResponse{
-		Today:     today,
-		ThisWeek:  week,
-		ThisMonth: month,
-		ThisYear:  year,
+		Today:      today,
+		ThisWeek:   week,
+		ThisMonth:  month,
+		ThisYear:   year,
+		Models:     models,
+		TimeSeries: ts,
 	}, nil
 }
 
@@ -166,6 +177,96 @@ func (s *UsageStore) querySince(since time.Time) ([]UsageStats, error) {
 		stats = []UsageStats{}
 	}
 	return stats, nil
+}
+
+func (s *UsageStore) queryModelStats(since time.Time) ([]ModelStats, error) {
+	rows, err := s.db.Query(`
+		SELECT
+			COALESCE(provider, '') as provider,
+			COALESCE(model, '') as model,
+			COUNT(*) as request_count,
+			SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as success_count,
+			SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failure_count,
+			COALESCE(SUM(total_tokens), 0) as total_tokens,
+			COALESCE(SUM(prompt_tokens), 0) as prompt_tokens,
+			COALESCE(SUM(completion_tokens), 0) as completion_tokens,
+			COALESCE(CAST(AVG(duration_ms) AS REAL), 0) as avg_duration_ms
+		FROM usage_records
+		WHERE created_at >= ?
+		GROUP BY provider, model
+		ORDER BY total_tokens DESC
+	`, since.Format(time.RFC3339))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []ModelStats
+	for rows.Next() {
+		var s ModelStats
+		if err := rows.Scan(
+			&s.Provider,
+			&s.Model,
+			&s.RequestCount,
+			&s.SuccessCount,
+			&s.FailureCount,
+			&s.TotalTokens,
+			&s.PromptTokens,
+			&s.CompletionTokens,
+			&s.AvgDurationMs,
+		); err != nil {
+			continue
+		}
+		stats = append(stats, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if stats == nil {
+		stats = []ModelStats{}
+	}
+	return stats, nil
+}
+
+func (s *UsageStore) queryTimeSeries(since time.Time) ([]TimeSeriesPoint, error) {
+	rows, err := s.db.Query(`
+		SELECT
+			date(created_at) as date,
+			COUNT(*) as request_count,
+			COALESCE(SUM(total_tokens), 0) as total_tokens,
+			COALESCE(SUM(prompt_tokens), 0) as prompt_tokens,
+			COALESCE(SUM(completion_tokens), 0) as completion_tokens
+		FROM usage_records
+		WHERE created_at >= ?
+		GROUP BY date(created_at)
+		ORDER BY date ASC
+	`, since.Format(time.RFC3339))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var points []TimeSeriesPoint
+	for rows.Next() {
+		var p TimeSeriesPoint
+		if err := rows.Scan(
+			&p.Date,
+			&p.RequestCount,
+			&p.TotalTokens,
+			&p.PromptTokens,
+			&p.CompletionTokens,
+		); err != nil {
+			continue
+		}
+		points = append(points, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if points == nil {
+		points = []TimeSeriesPoint{}
+	}
+	return points, nil
 }
 
 func boolToInt(b bool) int {

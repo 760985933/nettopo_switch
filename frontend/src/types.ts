@@ -186,9 +186,31 @@ export interface UsageStats {
   avgDurationMs: number
 }
 
+export interface ModelStats {
+  provider: string
+  model: string
+  requestCount: number
+  successCount: number
+  failureCount: number
+  totalTokens: number
+  promptTokens: number
+  completionTokens: number
+  avgDurationMs: number
+}
+
+export interface TimeSeriesPoint {
+  date: string
+  totalTokens: number
+  promptTokens: number
+  completionTokens: number
+  requestCount: number
+}
+
 export interface UsageStatsResponse {
   today: UsageStats[]
   thisWeek: UsageStats[]
   thisMonth: UsageStats[]
   thisYear: UsageStats[]
+  models: ModelStats[]
+  timeSeries: TimeSeriesPoint[]
 }
