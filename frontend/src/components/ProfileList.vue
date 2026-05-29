@@ -142,6 +142,7 @@ function cancelDelete() {
             <n-button size="small" tertiary @click="handleEdit(profile.id)">
               {{ t('models.editModel') }}
             </n-button>
+            <slot name="actions-after" :profile="profile" />
             <n-button v-if="showDelete" size="small" tertiary type="error" @click="handleDelete(profile.id)">
               {{ t('models.deleteModel') }}
             </n-button>

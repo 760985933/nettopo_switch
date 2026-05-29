@@ -151,6 +151,8 @@ async function handleRemoveProxy(id: string) {
         >
           <template #actions="{ profile }">
             <CodexLoginActions :profile-id="profile.id" />
+          </template>
+          <template #actions-after="{ profile }">
             <n-button size="small" tertiary type="warning" @click="handleRemoveProxy(profile.id)">
               {{ t('dashboard.removeProxy') }}
             </n-button>
