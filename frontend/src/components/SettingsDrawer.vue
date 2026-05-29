@@ -286,11 +286,6 @@ async function clearAllBackups() {
   >
     <n-drawer-content :title="t('settings.title')" closable>
       <div class="drawer-body">
-        <n-alert type="info" :bordered="false" closable>
-          <template #header>{{ t('settings.behaviorMoved') }}</template>
-          {{ t('settings.behaviorMovedDesc') }}
-        </n-alert>
-
         <n-space class="settings-actions">
           <n-button secondary size="small" @click="handleExport">{{ t('settings.actions.exportConfig') }}</n-button>
         </n-space>
