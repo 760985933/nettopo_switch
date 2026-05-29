@@ -476,6 +476,9 @@ func (b *ProxyRuntime) handleResponses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// DEBUG: 打印原始请求结构和图片相关信息
+	b.logResponsesRequestDebug(body, requestID)
+
 	reqSummary := summarizeResponsesRequest(body)
 	var upstreamRaw []byte
 
@@ -485,6 +488,7 @@ func (b *ProxyRuntime) handleResponses(w http.ResponseWriter, r *http.Request) {
 		b.writeProxyError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	b.logChatBodyDebug(chatBody, model, requestID)
 	reasoningInjected := false
 	if patched, ok := injectReasoningIntoChatPayload(chatBody, b.getLastReasoning()); ok {
 		chatBody = patched
@@ -716,6 +720,9 @@ func (b *ProxyRuntime) handleResponsesWS(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// DEBUG: 打印原始请求结构和图片相关信息
+	b.logResponsesRequestDebug(body, requestID)
+
 	chatBody, _, model, err := translateResponsesToChatCompletions(body, cfg)
 	if err != nil {
 		_ = conn.WriteJSON(map[string]any{
@@ -728,6 +735,8 @@ func (b *ProxyRuntime) handleResponsesWS(w http.ResponseWriter, r *http.Request)
 		b.app.appendLog("warn", "proxy", "responses WS 请求转换失败: "+err.Error(), requestID)
 		return
 	}
+
+	b.logChatBodyDebug(chatBody, model, requestID)
 
 	if !bytes.Contains(chatBody, []byte(`"stream":true`)) {
 		var patched map[string]any
@@ -1076,6 +1085,143 @@ func (b *ProxyRuntime) snapshotConfig() AppConfig {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.config
+}
+
+// DEBUG: 打印 Responses API 请求中的图片相关内容
+func (b *ProxyRuntime) logResponsesRequestDebug(body []byte, requestID string) {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		b.app.appendLog("info", "proxy", "[DEBUG] 请求体 JSON 解析失败: "+err.Error(), requestID)
+		return
+	}
+
+	// 打印顶层 key
+	keys := make([]string, 0, len(payload))
+	for k := range payload {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	inputAny, _ := payload["input"]
+	inputItems, _ := inputAny.([]any)
+
+	// 扫描 input 中的所有类型
+	type imageInfo struct {
+		kind      string // "top_level_input_image" or "in_message_content"
+		urlPrefix string // 前200字符
+		urlLen    int
+	}
+	var images []imageInfo
+	inputTypeCounts := map[string]int{}
+
+	for i, item := range inputItems {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		t, _ := m["type"].(string)
+		inputTypeCounts[t]++
+
+		switch t {
+		case "input_image":
+			urlStr := extractImageURL(m["image_url"])
+			prefix := urlStr
+			if len(prefix) > 200 {
+				prefix = prefix[:200] + "..."
+			}
+			images = append(images, imageInfo{
+				kind:      "top_level_input_image[" + strconv.Itoa(i) + "]",
+				urlPrefix: prefix,
+				urlLen:    len(urlStr),
+			})
+		case "message":
+			content, _ := m["content"].([]any)
+			for ci, cp := range content {
+				cm, ok := cp.(map[string]any)
+				if !ok {
+					continue
+				}
+				ct, _ := cm["type"].(string)
+				if ct == "input_image" {
+					urlStr := extractImageURL(cm["image_url"])
+					prefix := urlStr
+					if len(prefix) > 200 {
+						prefix = prefix[:200] + "..."
+					}
+					images = append(images, imageInfo{
+						kind:      "msg[" + strconv.Itoa(i) + "].content[" + strconv.Itoa(ci) + "]",
+						urlPrefix: prefix,
+						urlLen:    len(urlStr),
+					})
+				}
+			}
+		}
+	}
+
+	logParts := []string{fmt.Sprintf("[DEBUG] body_keys=%s", strings.Join(keys, ","))}
+	logParts = append(logParts, fmt.Sprintf("input_types=%s", summarizeResponsesInput(inputItems)))
+	if len(images) > 0 {
+		for _, img := range images {
+			logParts = append(logParts, fmt.Sprintf("IMAGE found at %s url_len=%d url_prefix=%s", img.kind, img.urlLen, img.urlPrefix))
+		}
+	} else {
+		logParts = append(logParts, "NO_IMAGE_FOUND")
+	}
+	b.app.appendLog("info", "proxy", strings.Join(logParts, " | "), requestID)
+}
+
+// DEBUG: Chat Completions 翻译结果中图片相关部分
+func (b *ProxyRuntime) logChatBodyDebug(chatBody []byte, model, requestID string) {
+	var payload map[string]any
+	if err := json.Unmarshal(chatBody, &payload); err != nil {
+		b.app.appendLog("info", "proxy", "[DEBUG-CHAT] JSON parse err: "+err.Error(), requestID)
+		return
+	}
+	messages, _ := payload["messages"].([]any)
+	imageCount := 0
+	var imageDetails []string
+	for mi, item := range messages {
+		msg, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		content := msg["content"]
+		contentArr, ok := content.([]any)
+		if !ok {
+			continue
+		}
+		for ci, cp := range contentArr {
+			cm, ok := cp.(map[string]any)
+			if !ok {
+				continue
+			}
+			ct, _ := cm["type"].(string)
+			if ct == "image_url" {
+				imageCount++
+				if iu, ok := cm["image_url"].(map[string]any); ok {
+					urlStr, _ := iu["url"].(string)
+					prefix := urlStr
+					if len(prefix) > 150 {
+						prefix = prefix[:150] + "..."
+					}
+					imageDetails = append(imageDetails, fmt.Sprintf("msg[%d].content[%d] url_len=%d prefix=%s", mi, ci, len(urlStr), prefix))
+				}
+			}
+		}
+	}
+	stream, _ := payload["stream"]
+	modelVal, _ := payload["model"].(string)
+	toolsN := 0
+	if tools, ok := payload["tools"].([]any); ok {
+		toolsN = len(tools)
+	}
+	msg := fmt.Sprintf("[DEBUG-CHAT] model=%s stream=%v messages=%d tools=%d image_count=%d", modelVal, stream, len(messages), toolsN, imageCount)
+	if len(imageDetails) > 0 {
+		for _, d := range imageDetails {
+			msg += " | IMAGE: " + d
+		}
+	}
+	b.app.appendLog("info", "proxy", msg, requestID)
 }
 
 func (b *ProxyRuntime) writeJSON(w http.ResponseWriter, statusCode int, payload any) {
