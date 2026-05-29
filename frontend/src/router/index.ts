@@ -5,6 +5,7 @@ import SessionsPage from '../pages/SessionsPage.vue'
 import ContactPage from '../pages/ContactPage.vue'
 import MonitoringPage from '../pages/MonitoringPage.vue'
 import ModelsPage from '../pages/ModelsPage.vue'
+import ProxyPage from '../pages/ProxyPage.vue'
 
 export const router = createRouter({
   history: createWebHashHistory(),
@@ -22,6 +23,11 @@ export const router = createRouter({
       path: '/models',
       name: 'models',
       component: ModelsPage,
+    },
+    {
+      path: '/proxy',
+      name: 'proxy',
+      component: ProxyPage,
     },
     {
       path: '/logs',

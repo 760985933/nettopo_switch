@@ -102,7 +102,12 @@ export const messages = {
     },
     proxy: {
       title: '代理设置',
-      description: '配置代理服务参数和行为',
+      description: '管理代理服务，为不同客户端提供接入配置',
+      tab: {
+        general: '常规设置',
+        codexDesktop: 'Codex Desktop',
+        claudeCode: 'Claude Code',
+      },
       save: '保存设置',
       section: {
         network: '网络设置',
@@ -124,6 +129,24 @@ export const messages = {
       compactMode: '紧凑模式',
       logRetentionDays: '日志保留天数',
       toast: { saved: '代理设置已保存' },
+      codex: {
+        overview: 'Codex Desktop 接入',
+        overviewDesc: '将代理地址配置到 Codex Desktop，即可通过本代理访问 AI 服务。',
+        quickLogin: '一键接入',
+        quickLoginDesc: '选择已配置的模型，点击按钮自动写入 Codex config.toml。',
+        configToml: '配置文件管理',
+        configTomlDesc: '直接查看和编辑 Codex 的 config.toml 配置文件。',
+      },
+      claude: {
+        overview: 'Claude Code 接入',
+        overviewDesc: '通过环境变量将 Claude Code 指向本代理地址，即可使用 Anthropic API 兼容的服务。',
+        envConfig: '环境变量配置',
+        envConfigDesc: '在终端中设置以下环境变量，Claude Code 将使用本代理访问 API：',
+        apiKeyNote: '同时设置你的 API Key（可使用任意兼容 Anthropic API 的 Key）：',
+        verify: '验证安装',
+        verifyDesc: '确认 Claude Code CLI 已正确安装：',
+        runHint: '设置完成后，在终端运行 claude 即可开始使用：',
+      },
     },
     dashboard: {
       currentProfile: '当前模型',
@@ -467,7 +490,12 @@ export const messages = {
     },
     proxy: {
       title: 'Proxy Settings',
-      description: 'Configure proxy server parameters and behavior',
+      description: 'Manage proxy service and provide access config for different clients',
+      tab: {
+        general: 'General',
+        codexDesktop: 'Codex Desktop',
+        claudeCode: 'Claude Code',
+      },
       save: 'Save Settings',
       section: {
         network: 'Network',
@@ -489,6 +517,24 @@ export const messages = {
       compactMode: 'Compact mode',
       logRetentionDays: 'Log retention (days)',
       toast: { saved: 'Proxy settings saved' },
+      codex: {
+        overview: 'Codex Desktop Access',
+        overviewDesc: 'Point Codex Desktop to this proxy to access AI services through your configured providers.',
+        quickLogin: 'Quick Setup',
+        quickLoginDesc: 'Select a configured model and click the button to auto-write Codex config.toml.',
+        configToml: 'Config File Management',
+        configTomlDesc: 'View and edit the Codex config.toml directly.',
+      },
+      claude: {
+        overview: 'Claude Code Access',
+        overviewDesc: 'Configure Claude Code to route through this proxy for Anthropic API-compatible services.',
+        envConfig: 'Environment Variables',
+        envConfigDesc: 'Set the following environment variables in your terminal:',
+        apiKeyNote: 'Also set your API key (any Anthropic API-compatible key works):',
+        verify: 'Verify Installation',
+        verifyDesc: 'Confirm Claude Code CLI is installed:',
+        runHint: 'Once configured, run claude in your terminal to start:',
+      },
     },
     dashboard: {
       currentProfile: 'Active Model',
