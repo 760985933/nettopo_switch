@@ -119,10 +119,10 @@ function cancelDelete() {
           <div class="profile-item-actions" @click.stop>
             <slot name="actions" :profile="profile" />
             <n-button size="small" tertiary @click="handleEdit(profile.id)">
-              {{ t('guide.step.one.edit') }}
+              {{ t('models.editModel') }}
             </n-button>
             <n-button size="small" tertiary type="error" @click="handleDelete(profile.id)">
-              {{ t('common.delete') }}
+              {{ t('models.deleteModel') }}
             </n-button>
           </div>
         </div>

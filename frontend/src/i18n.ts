@@ -98,6 +98,8 @@ export const messages = {
       confirmAdd: '确认添加',
       cancel: '取消',
       editor: { title: '编辑模型配置' },
+      editModel: '编辑模型',
+      deleteModel: '删除模型',
       toast: { added: '新配置已添加' },
     },
     proxy: {
@@ -486,6 +488,8 @@ export const messages = {
       confirmAdd: 'Add',
       cancel: 'Cancel',
       editor: { title: 'Edit Model Config' },
+      editModel: 'Edit Model',
+      deleteModel: 'Delete Model',
       toast: { added: 'New profile added' },
     },
     proxy: {
@@ -1072,6 +1076,10 @@ export const messages = {
       wxLabel: 'WeChat',
       zfbLabel: 'Alipay',
     },
+    models: {
+      editModel: 'モデルを編集',
+      deleteModel: 'モデルを削除',
+    },
     common: { delete: '削除' },
   },
   'ko-KR': {
@@ -1340,6 +1348,10 @@ export const messages = {
       sponsorList: '후원 목록',
       wxLabel: 'WeChat',
       zfbLabel: 'Alipay',
+    },
+    models: {
+      editModel: '모델 편집',
+      deleteModel: '모델 삭제',
     },
     common: { delete: '삭제' },
   },
@@ -1610,6 +1622,10 @@ export const messages = {
       wxLabel: 'WeChat',
       zfbLabel: 'Alipay',
     },
+    models: {
+      editModel: 'Modifier le modèle',
+      deleteModel: 'Supprimer le modèle',
+    },
     common: { delete: 'Supprimer' },
   },
   'de-DE': {
@@ -1873,6 +1889,10 @@ export const messages = {
       wxLabel: 'WeChat',
       zfbLabel: 'Alipay',
     },
+    models: {
+      editModel: 'Modell bearbeiten',
+      deleteModel: 'Modell löschen',
+    },
     common: { delete: 'Löschen' },
   },
   'es-AR': {
@@ -2135,6 +2155,10 @@ export const messages = {
       sponsorList: 'Patrocinadores',
       wxLabel: 'WeChat',
       zfbLabel: 'Alipay',
+    },
+    models: {
+      editModel: 'Editar modelo',
+      deleteModel: 'Eliminar modelo',
     },
     common: { delete: 'Eliminar' },
   },

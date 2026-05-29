@@ -35,7 +35,7 @@ async function loadCodexConfig() {
 
 async function handleWriteCodexConfig() {
   try {
-    const path = await codexStore.writeCodexConfigToml()
+    const path = await codexStore.writeCodexConfigTomlRaw(codexConfigContent.value)
     message.success(t('app.toast.codexTomlWritten', { path }))
     await loadCodexConfig()
   } catch (error) {
