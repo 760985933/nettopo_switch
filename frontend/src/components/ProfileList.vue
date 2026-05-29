@@ -10,6 +10,7 @@ const props = defineProps<{
   profiles: Profile[]
   currentProfileId: string
   loading: boolean
+  showDelete?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -139,7 +140,7 @@ function cancelDelete() {
             <n-button size="small" tertiary @click="handleEdit(profile.id)">
               {{ t('models.editModel') }}
             </n-button>
-            <n-button size="small" tertiary type="error" @click="handleDelete(profile.id)">
+            <n-button v-if="props.showDelete !== false" size="small" tertiary type="error" @click="handleDelete(profile.id)">
               {{ t('models.deleteModel') }}
             </n-button>
           </div>

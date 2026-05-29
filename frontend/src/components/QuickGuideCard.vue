@@ -139,6 +139,7 @@ function handleEditorSave() {
           :profiles="store.profileList"
           :current-profile-id="store.config.currentProfileId"
           :loading="store.isBusy"
+          :show-delete="false"
           @edit="handleEdit"
           @delete="handleDelete"
           @select="store.setCurrentProfile"
