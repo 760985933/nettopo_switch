@@ -218,8 +218,8 @@ onMounted(async () => {
   overflow: hidden;
   position: relative;
   flex-shrink: 0;
-  width: 180px;
-  min-width: 180px;
+  width: 185px;
+  min-width: 185px;
 }
 
 .sidebar.collapsed {
