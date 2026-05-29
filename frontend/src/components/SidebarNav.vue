@@ -218,8 +218,8 @@ onMounted(async () => {
   overflow: hidden;
   position: relative;
   flex-shrink: 0;
-  width: 220px;
-  min-width: 220px;
+  width: 180px;
+  min-width: 180px;
 }
 
 .sidebar.collapsed {
@@ -466,6 +466,7 @@ onMounted(async () => {
 }
 
 .locale-select {
-  margin: 0 10px 6px;
+  width: 120px;
+  margin: 0 auto 6px;
 }
 </style>

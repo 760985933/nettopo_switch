@@ -32,6 +32,12 @@ async function copyAll() {
   message.success(t('logs.toast.copiedAll'))
 }
 
+async function copyEntry(entry: typeof logs.value[number]) {
+  const text = `[${entry.timestamp}] ${entry.level.toUpperCase()} ${entry.source}: ${entry.message}`
+  await ClipboardSetText(text)
+  message.success(t('logs.toast.copied'))
+}
+
 onMounted(async () => {
   if (!store.lastLoadedAt) {
     await store.initialize()
@@ -60,6 +66,7 @@ onMounted(async () => {
           <span class="badge" :data-level="entry.level">{{ entry.level.toUpperCase() }}</span>
           <span>{{ entry.source }}</span>
           <span class="time">{{ entry.timestamp }}</span>
+          <span class="copy-btn" @click="copyEntry(entry)">{{ t('logs.actions.copy') }}</span>
         </div>
         <div class="msg">{{ entry.message }}</div>
       </div>
@@ -156,6 +163,19 @@ onMounted(async () => {
 
 .time {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.copy-btn {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 160ms ease;
+  flex-shrink: 0;
+}
+.log-row:hover .copy-btn {
+  opacity: 1;
 }
 
 .msg {

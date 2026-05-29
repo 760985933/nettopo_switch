@@ -112,7 +112,7 @@ export const messages = {
       },
       listenHost: '监听地址',
       listenPort: '监听端口',
-      proxyAddress: '代理地址（填入 Codex Desktop）',
+      proxyAddress: '代理地址',
       requestTimeout: '请求超时 (ms)',
       maxRetries: '最大重试次数',
       customHeaders: '附加请求头',
@@ -168,9 +168,9 @@ export const messages = {
     logs: {
       title: '最近日志',
       desc: '用于快速定位”启动/请求/健康检查”等关键事件。',
-      actions: { refresh: '刷新', copyAll: '复制全部' },
+      actions: { refresh: '刷新', copyAll: '复制全部', copy: '复制' },
       empty: { noLogs: '暂无日志' },
-      toast: { refreshed: '已刷新', copiedAll: '已复制全部日志' },
+      toast: { refreshed: '已刷新', copiedAll: '已复制全部日志', copied: '已复制该日志' },
     },
     sessions: {
       title: '会话管理',
@@ -477,7 +477,7 @@ export const messages = {
       },
       listenHost: 'Listen Host',
       listenPort: 'Listen Port',
-      proxyAddress: 'Proxy address (enter in Codex Desktop)',
+      proxyAddress: 'Proxy address',
       requestTimeout: 'Request Timeout (ms)',
       maxRetries: 'Max Retries',
       customHeaders: 'Custom Headers',
@@ -533,9 +533,9 @@ export const messages = {
     logs: {
       title: 'Recent Logs',
       desc: 'Quickly locate key events like start/requests/health checks.',
-      actions: { refresh: 'Refresh', copyAll: 'Copy All' },
+      actions: { refresh: 'Refresh', copyAll: 'Copy All', copy: 'Copy' },
       empty: { noLogs: 'No logs' },
-      toast: { refreshed: 'Refreshed', copiedAll: 'Copied all logs' },
+      toast: { refreshed: 'Refreshed', copiedAll: 'Copied all logs', copied: 'Copied' },
     },
     sessions: {
       title: 'Sessions',
