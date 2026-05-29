@@ -57,6 +57,9 @@ function friendlyError(raw: string): string {
   if (lower.includes('connection refused') || lower.includes('no such host') || lower.includes('dns') || lower.includes('unreachable')) {
     return t('guide.usage.networkError')
   }
+  if (lower.includes('unauthorized') || lower.includes('401') || lower.includes('invalid api key') || lower.includes('authentication') || lower.includes('auth')) {
+    return t('guide.usage.authError')
+  }
   if (raw.length > 40) {
     return t('guide.usage.queryFailed')
   }

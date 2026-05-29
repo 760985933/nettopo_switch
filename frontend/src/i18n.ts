@@ -394,6 +394,7 @@ export const messages = {
         timeout: '查询超时，点击重试',
         networkError: '网络异常，点击重试',
         queryFailed: '查询失败，点击重试',
+        authError: 'API Key 无效，请检查后重试',
       },
       monitor: {
         title: 'API 用量',
@@ -801,6 +802,7 @@ export const messages = {
         timeout: 'Query timeout, tap to retry',
         networkError: 'Network error, tap to retry',
         queryFailed: 'Query failed, tap to retry',
+        authError: 'Invalid API Key, please check and retry',
       },
       monitor: {
         title: 'API Usage',
@@ -1089,6 +1091,7 @@ export const messages = {
         timeout: 'クエリタイムアウト、タップして再試行',
         networkError: 'ネットワークエラー、タップして再試行',
         queryFailed: 'クエリ失敗、タップして再試行',
+        authError: 'APIキーが無効です、確認して再試行してください',
       },
       monitor: {
         title: 'API 使用量',
@@ -1365,6 +1368,7 @@ export const messages = {
         timeout: '쿼리 시간 초과, 탭하여 재시도',
         networkError: '네트워크 오류, 탭하여 재시도',
         queryFailed: '쿼리 실패, 탭하여 재시도',
+        authError: 'API 키가 유효하지 않습니다. 확인 후 다시 시도하세요',
       },
       monitor: {
         title: 'API 사용량',
@@ -1641,6 +1645,7 @@ export const messages = {
         timeout: 'Délai dépassé, appuyez pour réessayer',
         networkError: 'Erreur réseau, appuyez pour réessayer',
         queryFailed: 'Échec de la requête, appuyez pour réessayer',
+        authError: 'Clé API invalide, veuillez vérifier et réessayer',
       },
       monitor: {
         title: 'Utilisation API',
@@ -1917,6 +1922,7 @@ export const messages = {
         timeout: 'Zeitüberschreitung, zum Wiederholen tippen',
         networkError: 'Netzwerkfehler, zum Wiederholen tippen',
         queryFailed: 'Abfrage fehlgeschlagen, zum Wiederholen tippen',
+        authError: 'API-Schlüssel ungültig, bitte überprüfen und erneut versuchen',
       },
       monitor: {
         title: 'API-Nutzung',
@@ -2187,6 +2193,7 @@ export const messages = {
         timeout: 'Tiempo de espera agotado, toque para reintentar',
         networkError: 'Error de red, toque para reintentar',
         queryFailed: 'Consulta fallida, toque para reintentar',
+        authError: 'Clave API no válida, verifique y reintente',
       },
       monitor: {
         title: 'Uso de API',

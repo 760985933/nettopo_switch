@@ -70,6 +70,19 @@ async function copyText(value: string) {
 
 const activeTab = ref('codex')
 
+const tabs = [
+  {
+    key: 'codex',
+    label: t('overview.tab.codexDesktop'),
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+  },
+  {
+    key: 'claude',
+    label: t('overview.tab.claudeCode'),
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+  },
+]
+
 useProxyEvents({
   onStatus(payload) {
     store.applyStatus(payload)
@@ -88,45 +101,100 @@ onMounted(async () => {
 
 <template>
   <div class="proxy-page">
-    <n-tabs v-model:value="activeTab" type="segment" animated>
-      <n-tab-pane name="codex" :tab="t('overview.tab.codexDesktop')">
-        <QuickGuideCard
-          :listen-address="store.status.listenAddress"
-          :status="store.status"
-          :health="store.healthCheck"
-          :loading="busy"
-          @copy="copyText"
-          @health="handleHealth"
-          @stop="handleStop"
-          @refresh="wrapAction(async () => { await store.refreshStatus(); await store.refreshLogs() })"
-        />
-      </n-tab-pane>
+    <div class="tab-bar">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        class="tab-btn"
+        :class="{ active: activeTab === tab.key }"
+        @click="activeTab = tab.key"
+      >
+        <span class="tab-icon" v-html="tab.icon" />
+        <span class="tab-label">{{ tab.label }}</span>
+      </button>
+    </div>
 
-      <n-tab-pane name="claude" :tab="t('overview.tab.claudeCode')">
-        <div class="tab-placeholder" />
-      </n-tab-pane>
-    </n-tabs>
+    <div v-show="activeTab === 'codex'">
+      <QuickGuideCard
+        :listen-address="store.status.listenAddress"
+        :status="store.status"
+        :health="store.healthCheck"
+        :loading="busy"
+        @copy="copyText"
+        @health="handleHealth"
+        @stop="handleStop"
+        @refresh="wrapAction(async () => { await store.refreshStatus(); await store.refreshLogs() })"
+      />
+    </div>
+
+    <div v-show="activeTab === 'claude'" class="tab-placeholder" />
   </div>
 </template>
 
 <style scoped>
 .proxy-page {
   display: grid;
-  gap: 16px;
+  gap: 20px;
   max-width: 780px;
 }
 
-.proxy-page :deep(.n-tabs-nav) {
-  margin-bottom: 16px;
+/* ── Tab bar ── */
+.tab-bar {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(11, 18, 32, 0.04);
+  width: fit-content;
 }
 
-.proxy-page :deep(.n-tabs-tab) {
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(11, 18, 32, 0.48);
   font-size: 13px;
   font-weight: 500;
-  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  outline: none;
+  font-family: inherit;
+  white-space: nowrap;
 }
 
-.proxy-page :deep(.n-tabs-tab--active) {
+.tab-btn:hover {
+  color: rgba(11, 18, 32, 0.72);
+  background: rgba(11, 18, 32, 0.04);
+}
+
+.tab-btn.active {
+  color: rgba(11, 18, 32, 0.92);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   font-weight: 600;
+}
+
+.tab-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.tab-btn.active .tab-icon {
+  opacity: 1;
+}
+
+.tab-placeholder {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  border: 1px dashed var(--border);
+  background: var(--surface);
 }
 </style>
