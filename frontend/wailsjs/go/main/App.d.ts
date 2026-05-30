@@ -86,6 +86,8 @@ export function SetDebugMode(arg1:boolean):Promise<void>;
 
 export function SetSandboxConfig(arg1:main.SandboxWorkspaceConfig):Promise<main.SandboxWorkspaceConfig>;
 
+export function ShouldHideOnClose():Promise<boolean>;
+
 export function StartProxy():Promise<main.ProxyStatusPayload>;
 
 export function StopProxy():Promise<main.ProxyStatusPayload>;

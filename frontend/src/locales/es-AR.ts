@@ -126,7 +126,6 @@ settings: {
   language: 'Idioma',
   groupLabels: { behavior: 'Comportamiento' },
   switches: { autoStart: 'Inicio automático', minimizeToTray: 'Ocultar al cerrar', compactMode: 'Diseño compacto' },
-  form: { logRetentionDays: 'Retención (días)' },
   actions: { save: 'Guardar', exportConfig: 'Exportar', copyToml: 'Copiar TOML', writeFile: 'Escribir archivo', writeFileProfiles: 'Escribir (profiles.local)' },
   codex: {
     title: 'Codex config.toml',

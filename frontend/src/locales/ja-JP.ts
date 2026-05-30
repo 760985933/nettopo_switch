@@ -126,7 +126,6 @@ settings: {
   language: '言語',
   groupLabels: { behavior: '動作' },
   switches: { autoStart: '自動起動', minimizeToTray: '閉じると非表示', compactMode: 'コンパクト表示' },
-  form: { logRetentionDays: 'ログ保持日数' },
   actions: { save: '保存', exportConfig: 'エクスポート', copyToml: 'TOML をコピー', writeFile: 'ファイルに書き込み', writeFileProfiles: 'ファイルに書き込み (profiles.local)' },
   codex: {
     title: 'Codex config.toml',

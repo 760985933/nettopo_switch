@@ -170,6 +170,10 @@ export function SetSandboxConfig(arg1) {
   return window['go']['main']['App']['SetSandboxConfig'](arg1);
 }
 
+export function ShouldHideOnClose() {
+  return window['go']['main']['App']['ShouldHideOnClose']();
+}
+
 export function StartProxy() {
   return window['go']['main']['App']['StartProxy']();
 }

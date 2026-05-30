@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -23,6 +24,7 @@ import (
 // mainAppCtx is used by platform-specific code (e.g. tray callbacks)
 // that needs access to the Wails context outside of App methods.
 var mainAppCtx context.Context
+var forceQuit atomic.Bool
 
 const appVersion = "0.0.8"
 const updateManifestURL = "https://nettopo.com/nettopo-switch-version.txt"
@@ -101,6 +103,16 @@ func (a *App) shutdown(ctx context.Context) {
 
 func (a *App) GetAppVersion() string {
 	return "v" + appVersion
+}
+
+func (a *App) ShouldHideOnClose() bool {
+	if forceQuit.Load() {
+		forceQuit.Store(false)
+		return false
+	}
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.config.MinimizeToTray
 }
 
 func (a *App) SetDebugMode(enabled bool) {

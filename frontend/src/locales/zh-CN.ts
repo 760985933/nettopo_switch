@@ -115,7 +115,6 @@ proxy: {
   autoStart: '自动启动代理',
   minimizeToTray: '关闭时最小化到托盘',
   compactMode: '紧凑模式',
-  logRetentionDays: '日志保留天数',
   toast: { saved: '代理设置已保存' },
   codex: {
     overview: 'Codex Desktop 接入',
@@ -231,7 +230,6 @@ settings: {
     minimizeToTray: '关闭时隐藏窗口',
     compactMode: '紧凑布局',
   },
-  form: { logRetentionDays: '日志保留天数' },
   actions: {
     save: '保存设置',
     exportConfig: '导出配置',

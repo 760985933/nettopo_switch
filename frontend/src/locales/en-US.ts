@@ -114,7 +114,6 @@ proxy: {
   autoStart: 'Auto-start proxy',
   minimizeToTray: 'Minimize to tray on close',
   compactMode: 'Compact mode',
-  logRetentionDays: 'Log retention (days)',
   toast: { saved: 'Proxy settings saved' },
   codex: {
     overview: 'Codex Desktop Access',
@@ -226,7 +225,6 @@ settings: {
   behaviorMoved: 'Behavior settings moved',
   behaviorMovedDesc: 'Auto-start, minimize to tray, compact mode, log retention etc. have moved to the "Proxy Settings" page.',
   switches: { autoStart: 'Auto-start proxy', minimizeToTray: 'Hide window on close', compactMode: 'Compact layout' },
-  form: { logRetentionDays: 'Log retention (days)' },
   actions: { save: 'Save', exportConfig: 'Export', copyToml: 'Copy TOML', writeFile: 'Write File', writeFileProfiles: 'Write File (profiles.local)' },
     saving: 'Saving…',
   codex: {

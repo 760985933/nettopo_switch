@@ -126,7 +126,6 @@ settings: {
   language: '언어',
   groupLabels: { behavior: '동작' },
   switches: { autoStart: '자동 시작', minimizeToTray: '닫을 때 창 숨김', compactMode: '컴팩트 레이아웃' },
-  form: { logRetentionDays: '로그 보관 일수' },
   actions: { save: '저장', exportConfig: '내보내기', copyToml: 'TOML 복사', writeFile: '파일에 쓰기', writeFileProfiles: '파일에 쓰기 (profiles.local)' },
   codex: {
     title: 'Codex config.toml',

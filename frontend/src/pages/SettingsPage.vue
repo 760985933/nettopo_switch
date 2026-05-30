@@ -39,10 +39,6 @@ async function handleSave() {
           <span class="settings-label">{{ t('proxy.minimizeToTray') }}</span>
           <n-switch v-model:value="localConfig.minimizeToTray" />
         </div>
-        <div class="settings-item">
-          <span class="settings-label">{{ t('proxy.logRetentionDays') }}</span>
-          <n-input-number v-model:value="localConfig.logRetentionDays" :min="1" :max="30" style="width:100px" />
-        </div>
       </div>
     </div>
 

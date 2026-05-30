@@ -63,8 +63,8 @@ const navItems = computed(() => [
   { label: t('app.nav.sessions'), to: '/sessions' },
   { label: t('app.nav.monitoring'), to: '/monitoring' },
   { label: t('app.nav.logs'), to: '/logs' },
-  { label: t('app.nav.contact'), to: '/contact' },
   { label: t('app.nav.settings'), to: '/settings' },
+  { label: t('app.nav.contact'), to: '/contact' },
 ])
 
 const statusLabel = computed(() => {

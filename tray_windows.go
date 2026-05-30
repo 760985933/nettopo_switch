@@ -29,6 +29,7 @@ func setupWindowsTray(a *App) {
 				runtime.WindowShow(a.ctx)
 				runtime.WindowUnminimise(a.ctx)
 			case <-mQuit.ClickedCh:
+				forceQuit.Store(true)
 				systray.Quit()
 				runtime.Quit(a.ctx)
 			}

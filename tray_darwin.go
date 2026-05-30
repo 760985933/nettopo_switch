@@ -145,6 +145,7 @@ func handleTrayClick(tag int) {
 		runtime.WindowShow(mainAppCtx)
 		runtime.WindowUnminimise(mainAppCtx)
 	case trayMenuQuit:
+		forceQuit.Store(true)
 		runtime.Quit(mainAppCtx)
 	case trayMenuHelp:
 		runtime.WindowShow(mainAppCtx)
