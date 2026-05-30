@@ -271,7 +271,7 @@ func (a *App) enableClaude3pGateway(uuid, gatewayBaseURL, haikuModel, sonnetMode
 	if err != nil {
 		return "", err
 	}
-	apiKey := "ccs-" + apiKeyStr
+	apiKey := "nt-" + apiKeyStr
 
 	gw := claude3pGatewayConfig{
 		CoworkEgressAllowedHosts:     []string{"*"},
@@ -295,7 +295,6 @@ func (a *App) enableClaude3pGateway(uuid, gatewayBaseURL, haikuModel, sonnetMode
 	if err := os.WriteFile(gwPath, gwData, 0o600); err != nil {
 		return "", fmt.Errorf("写入 gateway 配置失败: %w", err)
 	}
-
 
 	// Update _meta.json to activate this gateway config.
 	if err := a.updateClaude3pMeta(uuid, "Claude"); err != nil {
@@ -384,7 +383,6 @@ func (a *App) restoreClaude3pGateway() {
 	if err := os.Remove(gwPath); err != nil && !os.IsNotExist(err) {
 		a.appendLog("warn", "app", "移除 Claude-3p gateway 配置失败: "+err.Error(), "")
 	}
-
 
 	// Remove the entry from _meta.json.
 	metaPath := filepath.Join(libPath, claude3pMetaFile)
