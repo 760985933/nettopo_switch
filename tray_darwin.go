@@ -7,10 +7,15 @@ package main
 #cgo LDFLAGS: -framework Cocoa
 
 #import <Cocoa/Cocoa.h>
+#import <objc/runtime.h>
 
 extern void goTrayOnClick(int tag);
+extern void goSetForceQuit(void);
+extern void goTrayReopen(void);
 
 static NSStatusItem* gStatusItem = NULL;
+
+// ── tray menu handler ────────────────────────────────────────────────
 
 @interface _TrayHandler : NSObject
 @end
@@ -23,6 +28,67 @@ static NSStatusItem* gStatusItem = NULL;
 @end
 
 static _TrayHandler* gHandler = nil;
+
+// ── NSApplication delegate proxy ─────────────────────────────────────
+// Wails sets its own NSApplicationDelegate. We insert a proxy that
+// intercepts applicationShouldTerminate: (to distinguish Cmd+Q / Dock
+// Quit from a window close button click) and applicationShouldHandleReopen:
+// (to restore the window when the Dock icon is clicked).
+// All other delegate methods are forwarded to Wails' original delegate.
+
+@interface _TrayAppDelegateProxy : NSObject <NSApplicationDelegate>
+@property (nonatomic, weak) id<NSApplicationDelegate> wrapped;
+@end
+
+@implementation _TrayAppDelegateProxy
+
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
+	goSetForceQuit();
+	if ([self.wrapped respondsToSelector:@selector(applicationShouldTerminate:)]) {
+		return [self.wrapped applicationShouldTerminate:sender];
+	}
+	return NSTerminateNow;
+}
+
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag {
+	goTrayReopen();
+	return NO;
+}
+
+- (BOOL)respondsToSelector:(SEL)aSelector {
+	if (sel_isEqual(aSelector, @selector(applicationShouldTerminate:)) ||
+		sel_isEqual(aSelector, @selector(applicationShouldHandleReopen:hasVisibleWindows:))) {
+		return YES;
+	}
+	return [self.wrapped respondsToSelector:aSelector];
+}
+
+- (id)forwardingTargetForSelector:(SEL)aSelector {
+	return self.wrapped;
+}
+
+@end
+
+static _TrayAppDelegateProxy* gAppDelegateProxy = nil;
+
+void tray_install_delegate_proxy(void) {
+	void (^block)(void) = ^{
+		id<NSApplicationDelegate> original = [NSApp delegate];
+		if (original == nil || [original isKindOfClass:[_TrayAppDelegateProxy class]]) {
+			return;
+		}
+		gAppDelegateProxy = [[_TrayAppDelegateProxy alloc] init];
+		gAppDelegateProxy.wrapped = original;
+		[NSApp setDelegate:gAppDelegateProxy];
+	};
+	if ([NSThread isMainThread]) {
+		block();
+	} else {
+		dispatch_sync(dispatch_get_main_queue(), block);
+	}
+}
+
+// ── status item / tray menu ──────────────────────────────────────────
 
 void tray_setup(const char* title) {
 	if ([NSThread isMainThread]) {
@@ -99,6 +165,11 @@ func (a *App) initPlatformTray() {
 	// We add a small delay to ensure the main thread's run loop is active.
 	go func() {
 		time.Sleep(500 * time.Millisecond)
+
+		// Install delegate proxy before Wails receives any OS quit events.
+		// Intercepts Cmd+Q / Dock Quit → sets forceQuit so OnBeforeClose
+		// allows the real quit; Dock icon click → restores the hidden window.
+		C.tray_install_delegate_proxy()
 
 		title := C.CString("Codex Switch")
 		defer C.free(unsafe.Pointer(title))
