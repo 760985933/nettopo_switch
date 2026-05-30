@@ -70,8 +70,16 @@ export function GetOverviewSnapshot() {
   return window['go']['main']['App']['GetOverviewSnapshot']();
 }
 
+export function GetOverviewSnapshotForSource(arg1) {
+  return window['go']['main']['App']['GetOverviewSnapshotForSource'](arg1);
+}
+
 export function GetProxyStatus() {
   return window['go']['main']['App']['GetProxyStatus']();
+}
+
+export function GetProxyStatusForSource(arg1) {
+  return window['go']['main']['App']['GetProxyStatusForSource'](arg1);
 }
 
 export function GetSandboxConfig() {
@@ -134,6 +142,10 @@ export function RestartProxy() {
   return window['go']['main']['App']['RestartProxy']();
 }
 
+export function RestartProxyForSource(arg1) {
+  return window['go']['main']['App']['RestartProxyForSource'](arg1);
+}
+
 export function RestoreCodexConfigToml() {
   return window['go']['main']['App']['RestoreCodexConfigToml']();
 }
@@ -148,6 +160,10 @@ export function RestoreCodexSessions(arg1) {
 
 export function RunHealthCheck() {
   return window['go']['main']['App']['RunHealthCheck']();
+}
+
+export function RunHealthCheckForSource(arg1) {
+  return window['go']['main']['App']['RunHealthCheckForSource'](arg1);
 }
 
 export function RunSync(arg1) {
@@ -178,8 +194,16 @@ export function StartProxy() {
   return window['go']['main']['App']['StartProxy']();
 }
 
+export function StartProxyForSource(arg1) {
+  return window['go']['main']['App']['StartProxyForSource'](arg1);
+}
+
 export function StopProxy() {
   return window['go']['main']['App']['StopProxy']();
+}
+
+export function StopProxyForSource(arg1) {
+  return window['go']['main']['App']['StopProxyForSource'](arg1);
 }
 
 export function WriteCodexConfigToml() {

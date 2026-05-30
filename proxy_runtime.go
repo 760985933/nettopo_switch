@@ -21,7 +21,8 @@ import (
 )
 
 type ProxyRuntime struct {
-	app *App
+	app    *App
+	source SourceID
 
 	mu                 sync.RWMutex
 	server             *http.Server
@@ -40,9 +41,10 @@ type ProxyRuntime struct {
 	debugMode          atomic.Bool
 }
 
-func NewProxyRuntime(app *App) *ProxyRuntime {
+func NewProxyRuntime(app *App, source SourceID) *ProxyRuntime {
 	r := &ProxyRuntime{
 		app:    app,
+		source: source,
 		status: ProxyStopped,
 	}
 	r.debugMode.Store(debugPayloadEnabled())
@@ -64,7 +66,7 @@ func (b *ProxyRuntime) Start(cfg AppConfig) error {
 		b.lastError = err.Error()
 		b.mu.Unlock()
 		b.app.appendLog("error", "proxy", "监听失败: "+err.Error(), "")
-		b.app.emitStatus()
+		b.app.emitStatus(b.source)
 		return err
 	}
 
@@ -98,7 +100,7 @@ func (b *ProxyRuntime) Start(cfg AppConfig) error {
 	b.mu.Unlock()
 
 	b.app.appendLog("info", "proxy", "代理服务已监听: "+listenAddress, "")
-	b.app.emitStatus()
+	b.app.emitStatus(b.source)
 
 	go func() {
 		err := server.Serve(ln)
@@ -177,6 +179,7 @@ func (b *ProxyRuntime) Status() ProxyStatusPayload {
 	defer b.mu.RUnlock()
 
 	payload := ProxyStatusPayload{
+		Source:        b.source,
 		Status:        b.status,
 		ListenAddress: b.listenAddress,
 		LastError:     b.lastError,
@@ -1097,7 +1100,7 @@ func (b *ProxyRuntime) setStatus(status ProxyStatus, lastError string) {
 	}
 	b.mu.Unlock()
 
-	b.app.emitStatus()
+	b.app.emitStatus(b.source)
 }
 
 func (b *ProxyRuntime) snapshotConfig() AppConfig {
@@ -1112,8 +1115,12 @@ func (b *ProxyRuntime) RefreshConfig() {
 	if err != nil {
 		return
 	}
+	effective, ok := cfg.EffectiveConfig(b.source)
+	if !ok {
+		return
+	}
 	b.mu.Lock()
-	b.config = cfg
+	b.config = effective
 	b.mu.Unlock()
 }
 

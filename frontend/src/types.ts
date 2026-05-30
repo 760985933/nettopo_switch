@@ -1,5 +1,7 @@
 export type ProxyStatus = 'stopped' | 'starting' | 'running' | 'error'
 
+export type SourceID = 'codex' | 'claude'
+
 export interface Profile {
   id: string
   name: string
@@ -11,7 +13,26 @@ export interface Profile {
   apiType: string
 }
 
+export interface InstanceConfig {
+  listenHost: string
+  listenPort: number
+  requestTimeoutMs: number
+  maxRetries: number
+  mappings: Record<string, string>
+  headers: Record<string, string>
+  currentProfileId: string
+  proxyProfileIds?: string[]
+}
+
 export interface AppConfig {
+  // Global
+  enableAutoStart: boolean
+  minimizeToTray: boolean
+  logRetentionDays: number
+  compactMode: boolean
+  pluginUnlockEnabled: boolean
+
+  // Flat transport fields (synced from codex instance for backward compat)
   listenHost: string
   listenPort: number
   deepseekBaseURL: string
@@ -19,19 +40,20 @@ export interface AppConfig {
   defaultModel: string
   requestTimeoutMs: number
   maxRetries: number
-  enableAutoStart: boolean
-  minimizeToTray: boolean
-  logRetentionDays: number
-  compactMode: boolean
-  pluginUnlockEnabled: boolean
   mappings: Record<string, string>
   headers: Record<string, string>
   currentProfileId: string
-  profiles: Record<string, Profile>
   proxyProfileIds?: string[]
+
+  // Multi-instance configs (canonical)
+  instances?: Record<SourceID, InstanceConfig>
+
+  // Shared profiles
+  profiles: Record<string, Profile>
 }
 
 export interface ProxyStatusPayload {
+  source: SourceID
   status: ProxyStatus
   listenAddress: string
   startedAt: string

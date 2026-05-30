@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -42,12 +43,27 @@ func (s *ConfigStore) Load() (AppConfig, error) {
 	if err != nil {
 		return cfg, err
 	}
-	if err := json.Unmarshal(content, &cfg); err != nil {
+
+	// Decode into a generic map first so we can detect old vs new format.
+	raw := make(map[string]any)
+	if err := json.Unmarshal(content, &raw); err != nil {
 		return defaultConfig(), err
 	}
-	// Hoist transport fields from old-style profile objects (pre-Phase-1 format)
-	// that json.Unmarshal silently dropped from the Profile struct.
-	hoistOldProfileTransport(&cfg, content)
+
+	_, hasInstances := raw["instances"]
+	if !hasInstances {
+		// Old format: unmarshal into cfg (flat fields populated), then migrate.
+		if err := json.Unmarshal(content, &cfg); err != nil {
+			return defaultConfig(), err
+		}
+		hoistOldProfileTransport(&cfg, content)
+		cfg = migrateToMultiInstance(cfg)
+	} else {
+		if err := json.Unmarshal(content, &cfg); err != nil {
+			return defaultConfig(), err
+		}
+	}
+
 	return normalizeConfig(cfg), nil
 }
 
@@ -68,11 +84,33 @@ func (s *ConfigStore) Save(cfg AppConfig) error {
 	return os.WriteFile(s.path, content, 0o600)
 }
 
+// migrateToMultiInstance creates Instances from flat fields (old-format config).
+func migrateToMultiInstance(cfg AppConfig) AppConfig {
+	if cfg.Instances == nil {
+		cfg.Instances = make(map[SourceID]*InstanceConfig)
+	}
+	if _, ok := cfg.Instances[SourceCodex]; !ok {
+		cfg.Instances[SourceCodex] = &InstanceConfig{
+			ListenHost:       cfg.ListenHost,
+			ListenPort:       cfg.ListenPort,
+			RequestTimeoutMs: cfg.RequestTimeoutMs,
+			MaxRetries:       cfg.MaxRetries,
+			Mappings:         copyMap(cfg.Mappings),
+			Headers:          copyMap(cfg.Headers),
+			CurrentProfileID: cfg.CurrentProfileID,
+			ProxyProfileIDs:  cfg.ProxyProfileIDs,
+		}
+	}
+	if _, ok := cfg.Instances[SourceClaude]; !ok {
+		cfg.Instances[SourceClaude] = defaultInstanceConfig(SourceClaude)
+	}
+	return cfg
+}
+
 // hoistOldProfileTransport extracts transport fields (requestTimeoutMs, maxRetries,
 // headers) from old-style profile objects in the raw JSON and promotes them to
 // AppConfig-level fields. This handles the migration case where a config saved by
-// a pre-Phase-1 version had these fields only inside profile objects — after the
-// Profile struct removed them, json.Unmarshal would silently drop the values.
+// a pre-Phase-1 version had these fields only inside profile objects.
 func hoistOldProfileTransport(cfg *AppConfig, raw []byte) {
 	if cfg == nil {
 		return
@@ -90,10 +128,6 @@ func hoistOldProfileTransport(cfg *AppConfig, raw []byte) {
 		return
 	}
 
-	// Hoist all transport fields from profile objects — the old config format
-	// kept these in profiles as the canonical copy (normalizeConfig synced
-	// profile → top-level). After Unmarshal, any profile-level-only fields
-	// are lost from the struct, so we restore them from raw JSON here.
 	for _, v := range profilesMap {
 		p, ok := v.(map[string]any)
 		if !ok {
@@ -132,29 +166,90 @@ func defaultConfig() AppConfig {
 		Mappings:     copyMap(p.DefaultMappings),
 	}
 
+	codexInst := defaultInstanceConfig(SourceCodex)
+	claudeInst := defaultInstanceConfig(SourceClaude)
+
 	return AppConfig{
-		ListenHost:       "127.0.0.1",
-		ListenPort:       17419,
+		// Global
+		EnableAutoStart:     false,
+		MinimizeToTray:      true,
+		LogRetentionDays:    7,
+		CompactMode:         true,
+		PluginUnlockEnabled: false,
+
+		// Flat fields synced from codex instance (backward compat)
+		ListenHost:       codexInst.ListenHost,
+		ListenPort:       codexInst.ListenPort,
 		DeepseekBaseURL:  p.DefaultBaseURL,
 		APIKey:           "",
 		DefaultModel:     p.DefaultModel,
+		RequestTimeoutMs: codexInst.RequestTimeoutMs,
+		MaxRetries:       codexInst.MaxRetries,
+		Mappings:         copyMap(codexInst.Mappings),
+		Headers:          copyMap(codexInst.Headers),
+		CurrentProfileID: "default",
+		ProxyProfileIDs:  []string{"default"},
+
+		// Canonical instances
+		Instances: map[SourceID]*InstanceConfig{
+			SourceCodex:  codexInst,
+			SourceClaude: claudeInst,
+		},
+
+		Profiles: map[string]*Profile{"default": &defaultProfile},
+	}
+}
+
+func defaultInstanceConfig(source SourceID) *InstanceConfig {
+	port := 17419
+	if source == SourceClaude {
+		port = 17420
+	}
+	return &InstanceConfig{
+		ListenHost:       "127.0.0.1",
+		ListenPort:       port,
 		RequestTimeoutMs: 60000,
 		MaxRetries:       3,
-		EnableAutoStart:  false,
-		MinimizeToTray:   true,
-		LogRetentionDays: 7,
-		CompactMode:         true,
-		PluginUnlockEnabled: false,
-		Mappings:            copyMap(p.DefaultMappings),
-		Headers:             map[string]string{},
-		Profiles:            map[string]*Profile{"default": &defaultProfile},
-		CurrentProfileID:    "default",
+		Mappings:         map[string]string{},
+		Headers:          map[string]string{},
+		CurrentProfileID: "default",
 	}
 }
 
 func normalizeConfig(cfg AppConfig) AppConfig {
 	defaults := defaultConfig()
 
+	// Ensure Instances map exists
+	if cfg.Instances == nil {
+		cfg.Instances = make(map[SourceID]*InstanceConfig)
+	}
+	for _, src := range AllSources() {
+		if cfg.Instances[src] == nil {
+			cfg.Instances[src] = defaultInstanceConfig(src)
+		}
+		normalizeInstance(cfg.Instances[src], *defaultInstanceConfig(src))
+		// Ensure CurrentProfileID points to a valid profile
+		if _, ok := cfg.Profiles[cfg.Instances[src].CurrentProfileID]; !ok {
+			for id := range cfg.Profiles {
+				cfg.Instances[src].CurrentProfileID = id
+				break
+			}
+		}
+	}
+
+	// Sync flat fields from codex instance for backward compat
+	if codexInst, ok := cfg.Instances[SourceCodex]; ok {
+		cfg.ListenHost = codexInst.ListenHost
+		cfg.ListenPort = codexInst.ListenPort
+		cfg.RequestTimeoutMs = codexInst.RequestTimeoutMs
+		cfg.MaxRetries = codexInst.MaxRetries
+		cfg.Mappings = codexInst.Mappings
+		cfg.Headers = codexInst.Headers
+		cfg.CurrentProfileID = codexInst.CurrentProfileID
+		cfg.ProxyProfileIDs = codexInst.ProxyProfileIDs
+	}
+
+	// Legacy flat-field fallbacks
 	if strings.TrimSpace(cfg.ListenHost) == "" {
 		cfg.ListenHost = defaults.ListenHost
 	}
@@ -184,7 +279,7 @@ func normalizeConfig(cfg AppConfig) AppConfig {
 		cfg.Headers = map[string]string{}
 	}
 
-	// 从 provider 默认值补充缺失的 mappings
+	// Fill missing mappings from provider defaults
 	for key, value := range defaults.Mappings {
 		if _, ok := cfg.Mappings[key]; !ok {
 			cfg.Mappings[key] = value
@@ -193,7 +288,6 @@ func normalizeConfig(cfg AppConfig) AppConfig {
 
 	// --- Multi-profile migration & sync ---
 
-	// Migration: if no profiles exist, create one from old flat fields
 	if len(cfg.Profiles) == 0 {
 		profile := &Profile{
 			ID:           "default",
@@ -207,7 +301,7 @@ func normalizeConfig(cfg AppConfig) AppConfig {
 		cfg.CurrentProfileID = "default"
 	}
 
-	// Ensure current profile ID is valid
+	// Ensure current profile ID is valid (flat field)
 	if _, ok := cfg.Profiles[cfg.CurrentProfileID]; !ok {
 		for id := range cfg.Profiles {
 			cfg.CurrentProfileID = id
@@ -215,7 +309,7 @@ func normalizeConfig(cfg AppConfig) AppConfig {
 		}
 	}
 
-	// Normalize current profile and sync identity fields back to flat fields for backward compat
+	// Normalize current profile and sync identity fields
 	if profile, ok := cfg.Profiles[cfg.CurrentProfileID]; ok {
 		normalizeProfile(profile, defaults)
 		cfg.DeepseekBaseURL = profile.BaseURL
@@ -231,26 +325,60 @@ func normalizeConfig(cfg AppConfig) AppConfig {
 		}
 	}
 
-	// Migration: only seed once when the field has never been set (nil),
-	// not when the user intentionally cleared all proxy entries (empty slice).
+	// Migration: seed ProxyProfileIDs when nil
 	if cfg.ProxyProfileIDs == nil && len(cfg.Profiles) > 0 {
 		ids := make([]string, 0, len(cfg.Profiles))
 		for id := range cfg.Profiles {
 			ids = append(ids, id)
 		}
+		sort.Strings(ids)
 		cfg.ProxyProfileIDs = ids
+	}
+	// Also sync instance-level proxyProfileIds
+	for _, src := range AllSources() {
+		inst := cfg.Instances[src]
+		if inst.ProxyProfileIDs == nil && len(cfg.Profiles) > 0 {
+			ids := make([]string, 0, len(cfg.Profiles))
+			for id := range cfg.Profiles {
+				ids = append(ids, id)
+			}
+			sort.Strings(ids)
+			inst.ProxyProfileIDs = ids
+		}
 	}
 
 	return cfg
 }
 
+func normalizeInstance(ic *InstanceConfig, defaults InstanceConfig) {
+	if strings.TrimSpace(ic.ListenHost) == "" {
+		ic.ListenHost = defaults.ListenHost
+	}
+	if ic.ListenPort <= 0 {
+		ic.ListenPort = defaults.ListenPort
+	}
+	if ic.RequestTimeoutMs <= 0 {
+		ic.RequestTimeoutMs = defaults.RequestTimeoutMs
+	}
+	if ic.MaxRetries < 0 {
+		ic.MaxRetries = defaults.MaxRetries
+	}
+	if ic.Mappings == nil {
+		ic.Mappings = map[string]string{}
+	}
+	if ic.Headers == nil {
+		ic.Headers = map[string]string{}
+	}
+	if strings.TrimSpace(ic.CurrentProfileID) == "" {
+		ic.CurrentProfileID = defaults.CurrentProfileID
+	}
+}
+
 func normalizeProfile(p *Profile, defaults AppConfig) {
-	// Default provider to "deepseek" for backward compatibility
 	if strings.TrimSpace(p.Provider) == "" {
 		p.Provider = string(ProviderDeepSeek)
 	}
 
-	// Use provider-specific defaults if available
 	prov := GetProvider(ProviderID(p.Provider))
 
 	p.BaseURL = strings.TrimRight(strings.TrimSpace(p.BaseURL), "/")
@@ -271,7 +399,6 @@ func normalizeProfile(p *Profile, defaults AppConfig) {
 	if p.Mappings == nil {
 		p.Mappings = map[string]string{}
 	}
-	// Fill in missing mappings from provider defaults first, then global defaults
 	provMappings := defaults.Mappings
 	if prov != nil && prov.DefaultMappings != nil {
 		provMappings = prov.DefaultMappings

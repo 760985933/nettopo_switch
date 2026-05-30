@@ -4,9 +4,11 @@ import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { ClipboardSetText } from '../../wailsjs/runtime/runtime'
 import QuickGuideCard from '../components/QuickGuideCard.vue'
+import ClaudeSetupGuide from '../components/ClaudeSetupGuide.vue'
 import { useProxyEvents } from '../composables/useProxyEvents'
 import { useAppStore } from '../stores/app'
 import { useUiStore } from '../stores/ui'
+import type { SourceID } from '../types'
 
 const store = useAppStore()
 const ui = useUiStore()
@@ -52,12 +54,12 @@ async function wrapAction<T>(
   }
 }
 
-async function handleStop() {
-  await wrapAction(async () => store.stopProxy(), t('overview.toast.proxyStopped'))
+async function handleStop(source: SourceID) {
+  await wrapAction(async () => store.stopProxyForSource(source), t('overview.toast.proxyStopped'))
 }
 
-async function handleHealth() {
-  const result = await wrapAction(async () => store.runHealthCheck())
+async function handleHealth(source: SourceID) {
+  const result = await wrapAction(async () => store.runHealthCheckForSource(source))
   if (result) {
     message[result.ok ? 'success' : 'warning'](result.ok ? t('overview.health.ok') : t('overview.health.bad'))
   }
@@ -68,20 +70,27 @@ async function copyText(value: string) {
   message.success(t('overview.toast.clipboardCopied'))
 }
 
-const activeTab = ref('codex')
+const activeTab = ref<SourceID>('codex')
 
 const tabs = [
   {
-    key: 'codex',
+    key: 'codex' as SourceID,
     label: t('overview.tab.codexDesktop'),
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
   },
   {
-    key: 'claude',
+    key: 'claude' as SourceID,
     label: t('overview.tab.claudeCode'),
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
   },
 ]
+
+async function handleRefresh(source: SourceID) {
+  await wrapAction(async () => {
+    await store.refreshStatus(source)
+    await store.refreshLogs()
+  })
+}
 
 useProxyEvents({
   onStatus(payload) {
@@ -116,18 +125,30 @@ onMounted(async () => {
 
     <div v-show="activeTab === 'codex'">
       <QuickGuideCard
-        :listen-address="store.status.listenAddress"
-        :status="store.status"
-        :health="store.healthCheck"
+        :source="'codex'"
+        :listen-address="store.statuses.codex.listenAddress"
+        :status="store.statuses.codex"
+        :health="store.healthCheckForSource('codex')"
         :loading="busy"
         @copy="copyText"
-        @health="handleHealth"
-        @stop="handleStop"
-        @refresh="wrapAction(async () => { await store.refreshStatus(); await store.refreshLogs() })"
+        @health="handleHealth('codex')"
+        @stop="handleStop('codex')"
+        @refresh="handleRefresh('codex')"
       />
     </div>
 
-    <div v-show="activeTab === 'claude'" class="tab-placeholder" />
+    <div v-show="activeTab === 'claude'">
+      <ClaudeSetupGuide
+        :source="'claude'"
+        :status="store.statuses.claude"
+        :health="store.healthCheckForSource('claude')"
+        :loading="busy"
+        @copy="copyText"
+        @health="handleHealth('claude')"
+        @stop="handleStop('claude')"
+        @refresh="handleRefresh('claude')"
+      />
+    </div>
   </div>
 </template>
 
@@ -185,15 +206,5 @@ onMounted(async () => {
 
 .tab-btn.active .tab-icon {
   opacity: 1;
-}
-
-.tab-placeholder {
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 22px;
-  border: 1px dashed var(--border);
-  background: var(--surface);
 }
 </style>

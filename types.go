@@ -11,6 +11,16 @@ const (
 	ProxyError    ProxyStatus = "error"
 )
 
+// SourceID identifies a proxy instance.
+type SourceID string
+
+const (
+	SourceCodex  SourceID = "codex"
+	SourceClaude SourceID = "claude"
+)
+
+func AllSources() []SourceID { return []SourceID{SourceCodex, SourceClaude} }
+
 type Profile struct {
 	ID           string            `json:"id"`
 	Name         string            `json:"name"`
@@ -22,7 +32,27 @@ type Profile struct {
 	APIType      string            `json:"apiType,omitempty"`
 }
 
+// InstanceConfig holds the per-source proxy instance configuration.
+type InstanceConfig struct {
+	ListenHost       string            `json:"listenHost"`
+	ListenPort       int               `json:"listenPort"`
+	RequestTimeoutMs int               `json:"requestTimeoutMs"`
+	MaxRetries       int               `json:"maxRetries"`
+	Mappings         map[string]string `json:"mappings"`
+	Headers          map[string]string `json:"headers"`
+	CurrentProfileID string            `json:"currentProfileId"`
+	ProxyProfileIDs  []string          `json:"proxyProfileIds,omitempty"`
+}
+
 type AppConfig struct {
+	// Global behaviour
+	EnableAutoStart     bool `json:"enableAutoStart"`
+	MinimizeToTray      bool `json:"minimizeToTray"`
+	LogRetentionDays    int  `json:"logRetentionDays"`
+	CompactMode         bool `json:"compactMode"`
+	PluginUnlockEnabled bool `json:"pluginUnlockEnabled"`
+
+	// ── Flat transport / identity fields (runtime working set, synced from current instance) ──
 	ListenHost       string            `json:"listenHost"`
 	ListenPort       int               `json:"listenPort"`
 	DeepseekBaseURL  string            `json:"deepseekBaseURL"`
@@ -30,26 +60,58 @@ type AppConfig struct {
 	DefaultModel     string            `json:"defaultModel"`
 	RequestTimeoutMs int               `json:"requestTimeoutMs"`
 	MaxRetries       int               `json:"maxRetries"`
-	EnableAutoStart  bool              `json:"enableAutoStart"`
-	MinimizeToTray   bool              `json:"minimizeToTray"`
-	LogRetentionDays     int               `json:"logRetentionDays"`
-	CompactMode          bool              `json:"compactMode"`
-	PluginUnlockEnabled  bool              `json:"pluginUnlockEnabled"`
-	Mappings             map[string]string `json:"mappings"`
-	Headers              map[string]string `json:"headers"`
+	Mappings         map[string]string `json:"mappings"`
+	Headers          map[string]string `json:"headers"`
+	CurrentProfileID string            `json:"currentProfileId,omitempty"`
+	ProxyProfileIDs  []string          `json:"proxyProfileIds,omitempty"`
 
-	CurrentProfileID string              `json:"currentProfileId,omitempty"`
-	Profiles         map[string]*Profile `json:"profiles,omitempty"`
-	ProxyProfileIDs  []string            `json:"proxyProfileIds,omitempty"`
+	// ── Multi-instance configs (canonical storage) ──
+	Instances map[SourceID]*InstanceConfig `json:"instances,omitempty"`
+
+	// ── Shared profile definitions ──
+	Profiles map[string]*Profile `json:"profiles,omitempty"`
+}
+
+// EffectiveConfig builds a flat AppConfig for the given source by merging
+// the instance config with its selected profile. Used by ProxyRuntime at start time.
+func (cfg AppConfig) EffectiveConfig(source SourceID) (AppConfig, bool) {
+	ic, ok := cfg.Instances[source]
+	if !ok {
+		return AppConfig{}, false
+	}
+	effective := AppConfig{
+		ListenHost:       ic.ListenHost,
+		ListenPort:       ic.ListenPort,
+		RequestTimeoutMs: ic.RequestTimeoutMs,
+		MaxRetries:       ic.MaxRetries,
+		Mappings:         copyMap(ic.Mappings),
+		Headers:          copyMap(ic.Headers),
+		CurrentProfileID: ic.CurrentProfileID,
+		ProxyProfileIDs:  ic.ProxyProfileIDs,
+		Profiles:         cfg.Profiles,
+		// copy global fields
+		EnableAutoStart:     cfg.EnableAutoStart,
+		MinimizeToTray:      cfg.MinimizeToTray,
+		LogRetentionDays:    cfg.LogRetentionDays,
+		CompactMode:         cfg.CompactMode,
+		PluginUnlockEnabled: cfg.PluginUnlockEnabled,
+	}
+	if profile, ok := cfg.Profiles[ic.CurrentProfileID]; ok {
+		effective.DeepseekBaseURL = profile.BaseURL
+		effective.APIKey = profile.APIKey
+		effective.DefaultModel = profile.DefaultModel
+	}
+	return effective, true
 }
 
 type ProxyStatusPayload struct {
+	Source        SourceID    `json:"source"`
 	Status        ProxyStatus `json:"status"`
-	ListenAddress string       `json:"listenAddress"`
-	StartedAt     string       `json:"startedAt"`
-	UptimeSeconds int64        `json:"uptimeSeconds"`
-	LastError     string       `json:"lastError"`
-	RequestCount  int64        `json:"requestCount"`
+	ListenAddress string      `json:"listenAddress"`
+	StartedAt     string      `json:"startedAt"`
+	UptimeSeconds int64       `json:"uptimeSeconds"`
+	LastError     string      `json:"lastError"`
+	RequestCount  int64       `json:"requestCount"`
 }
 
 type OverviewSnapshot struct {

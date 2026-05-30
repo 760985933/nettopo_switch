@@ -36,6 +36,13 @@ declare module '../wailsjs/go/main/App' {
  export function WriteCodexConfigToml(): Promise<string>
  export function WriteCodexConfigTomlProfiles(): Promise<string>
  export function WriteCodexConfigTomlRaw(content: string): Promise<string>
+ // Source-aware methods (multi-instance)
+ export function StartProxyForSource(source: string): Promise<main.ProxyStatusPayload>
+ export function StopProxyForSource(source: string): Promise<main.ProxyStatusPayload>
+ export function RestartProxyForSource(source: string): Promise<main.ProxyStatusPayload>
+ export function GetProxyStatusForSource(source: string): Promise<main.ProxyStatusPayload>
+ export function RunHealthCheckForSource(source: string): Promise<main.HealthCheckResult>
+ export function GetOverviewSnapshotForSource(source: string): Promise<main.OverviewSnapshot>
 }
 
 // Augment Window type so generated wailsjs JS files don't error on window['go']
@@ -69,6 +76,13 @@ interface Window {
  WriteCodexConfigToml: () => Promise<string>
  WriteCodexConfigTomlProfiles: () => Promise<string>
  WriteCodexConfigTomlRaw: (arg1: string) => Promise<string>
+ StartProxyForSource: (arg1: string) => Promise<main.ProxyStatusPayload>
+ StopProxyForSource: (arg1: string) => Promise<main.ProxyStatusPayload>
+ RestartProxyForSource: (arg1: string) => Promise<main.ProxyStatusPayload>
+ GetProxyStatusForSource: (arg1: string) => Promise<main.ProxyStatusPayload>
+ RunHealthCheckForSource: (arg1: string) => Promise<main.HealthCheckResult>
+ GetOverviewSnapshotForSource: (arg1: string) => Promise<main.OverviewSnapshot>
+ SetCurrentProfileForSource: (arg1: string, arg2: string) => Promise<main.AppConfig>
  }
  }
  }
@@ -93,6 +107,17 @@ declare namespace main {
  headers: Record<string, string>
  currentProfileId: string
  profiles: Record<string, Profile>
+ instances?: Record<string, InstanceConfig>
+ }
+ export class InstanceConfig {
+ listenHost: string
+ listenPort: number
+ requestTimeoutMs: number
+ maxRetries: number
+ mappings: Record<string, string>
+ headers: Record<string, string>
+ currentProfileId: string
+ proxyProfileIds?: string[]
  }
  export class Profile {
  id: string
@@ -107,6 +132,7 @@ declare namespace main {
  headers: Record<string, string>
  }
  export class ProxyStatusPayload {
+ source: string
  status: string
  listenAddress: string
  startedAt: string

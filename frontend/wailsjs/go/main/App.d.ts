@@ -36,7 +36,11 @@ export function GetLogHistory(arg1:number):Promise<Array<main.LogEntry>>;
 
 export function GetOverviewSnapshot():Promise<main.OverviewSnapshot>;
 
+export function GetOverviewSnapshotForSource(arg1:main.SourceID):Promise<main.OverviewSnapshot>;
+
 export function GetProxyStatus():Promise<main.ProxyStatusPayload>;
+
+export function GetProxyStatusForSource(arg1:main.SourceID):Promise<main.ProxyStatusPayload>;
 
 export function GetSandboxConfig():Promise<main.SandboxWorkspaceConfig>;
 
@@ -68,6 +72,8 @@ export function ReadCodexConfigToml():Promise<string>;
 
 export function RestartProxy():Promise<main.ProxyStatusPayload>;
 
+export function RestartProxyForSource(arg1:main.SourceID):Promise<main.ProxyStatusPayload>;
+
 export function RestoreCodexConfigToml():Promise<string>;
 
 export function RestoreCodexConfigTomlFromBackup(arg1:string):Promise<string>;
@@ -75,6 +81,8 @@ export function RestoreCodexConfigTomlFromBackup(arg1:string):Promise<string>;
 export function RestoreCodexSessions(arg1:string):Promise<main.MigrationResult>;
 
 export function RunHealthCheck():Promise<main.HealthCheckResult>;
+
+export function RunHealthCheckForSource(arg1:main.SourceID):Promise<main.HealthCheckResult>;
 
 export function RunSync(arg1:string):Promise<main.SyncResult>;
 
@@ -90,7 +98,11 @@ export function ShouldHideOnClose():Promise<boolean>;
 
 export function StartProxy():Promise<main.ProxyStatusPayload>;
 
+export function StartProxyForSource(arg1:main.SourceID):Promise<main.ProxyStatusPayload>;
+
 export function StopProxy():Promise<main.ProxyStatusPayload>;
+
+export function StopProxyForSource(arg1:main.SourceID):Promise<main.ProxyStatusPayload>;
 
 export function WriteCodexConfigToml():Promise<string>;
 

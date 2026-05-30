@@ -13,6 +13,12 @@ import {
   SetCurrentProfile,
   StartProxy,
   StopProxy,
+  StartProxyForSource,
+  StopProxyForSource,
+  RestartProxyForSource,
+  GetProxyStatusForSource,
+  RunHealthCheckForSource,
+  GetOverviewSnapshotForSource,
 } from '../../wailsjs/go/main/App'
 import type {
   AppConfig,
@@ -22,10 +28,25 @@ import type {
   LogEntry,
   OverviewSnapshot,
   UsageStatsResponse,
+  SourceID,
+  InstanceConfig,
 } from '../types'
 import { getDefaultProviderPreset, getProviderPreset } from '../utils/providers'
 
 const defaultPreset = getDefaultProviderPreset()
+
+function makeFallbackInstanceConfig(source: SourceID): InstanceConfig {
+  return {
+    listenHost: '127.0.0.1',
+    listenPort: source === 'claude' ? 17420 : 17419,
+    requestTimeoutMs: 60000,
+    maxRetries: 3,
+    mappings: {},
+    headers: {},
+    currentProfileId: 'default',
+    proxyProfileIds: ['default'],
+  }
+}
 
 const FALLBACK_CONFIG: AppConfig = {
   listenHost: '127.0.0.1',
@@ -44,17 +65,26 @@ const FALLBACK_CONFIG: AppConfig = {
   headers: {},
   currentProfileId: 'default',
   profiles: {},
-  proxyProfileIds: [] as string[],
+  proxyProfileIds: [],
+  instances: {
+    codex: makeFallbackInstanceConfig('codex'),
+    claude: makeFallbackInstanceConfig('claude'),
+  },
 }
 
-const FALLBACK_STATUS: ProxyStatusPayload = {
-  status: 'stopped',
-  listenAddress: '',
-  startedAt: '',
-  uptimeSeconds: 0,
-  lastError: '',
-  requestCount: 0,
+function makeFallbackStatus(source: SourceID): ProxyStatusPayload {
+  return {
+    source,
+    status: 'stopped',
+    listenAddress: '',
+    startedAt: '',
+    uptimeSeconds: 0,
+    lastError: '',
+    requestCount: 0,
+  }
 }
+
+const FALLBACK_STATUS: ProxyStatusPayload = makeFallbackStatus('codex')
 
 function makeDefaultProfile(id: string, name: string, provider?: string): Profile {
   const preset = provider ? getProviderPreset(provider) : undefined
@@ -71,10 +101,6 @@ function makeDefaultProfile(id: string, name: string, provider?: string): Profil
 }
 
 // --- Type-safe Wails bridge ---
-// Wails-generated bindings type arguments as Go-derived classes (with methods), but
-// at runtime only data fields traverse the JSON serialization boundary.  Plain
-// objects matching the field shape are sufficient.  This wrapper isolates the
-// unavoidable casts so store actions stay fully type-checked.
 function saveAppConfigBridge(cfg: AppConfig): Promise<AppConfig> {
   return SaveAppConfig(cfg as any) as Promise<AppConfig>
 }
@@ -82,15 +108,32 @@ function saveAppConfigBridge(cfg: AppConfig): Promise<AppConfig> {
 export const useAppStore = defineStore('app', {
   state: () => ({
     config: { ...FALLBACK_CONFIG } as AppConfig,
-    status: { ...FALLBACK_STATUS } as ProxyStatusPayload,
+    statuses: {
+      codex: makeFallbackStatus('codex'),
+      claude: makeFallbackStatus('claude'),
+    } as Record<SourceID, ProxyStatusPayload>,
+    healthChecks: {} as Record<SourceID, HealthCheckResult | null>,
     recentLogs: [] as LogEntry[],
-    healthCheck: null as HealthCheckResult | null,
     quickTips: [] as string[],
     usageStats: null as UsageStatsResponse | null,
     isBusy: false,
     lastLoadedAt: '',
   }),
   getters: {
+    // Legacy getter (backward compat)
+    status(state): ProxyStatusPayload {
+      return state.statuses.codex
+    },
+    healthCheck(state): HealthCheckResult | null {
+      return state.healthChecks.codex ?? null
+    },
+    // Source-aware getters
+    statusForSource: (state) => (source: SourceID) => state.statuses[source],
+    healthCheckForSource: (state) => (source: SourceID) => state.healthChecks[source] ?? null,
+    instanceConfig: (state) => (source: SourceID) => {
+      return state.config.instances?.[source] ?? makeFallbackInstanceConfig(source)
+    },
+    isRunningForSource: (state) => (source: SourceID) => state.statuses[source]?.status === 'running',
     currentProfile(state): Profile | null {
       const p = state.config.profiles[state.config.currentProfileId]
       return p ?? null
@@ -103,16 +146,32 @@ export const useAppStore = defineStore('app', {
       return ids.map(id => state.config.profiles[id]).filter(Boolean) as Profile[]
     },
     isRunning(state): boolean {
-      return state.status.status === 'running'
+      return state.statuses.codex.status === 'running'
     },
   },
   actions: {
     async initialize() {
-      const snapshot = (await GetOverviewSnapshot()) as OverviewSnapshot
+      const snapshot = (await GetOverviewSnapshot()) as unknown as OverviewSnapshot
       this.applySnapshot(snapshot)
     },
-    async refreshStatus() {
-      this.status = (await GetProxyStatus()) as ProxyStatusPayload
+    // ── Legacy actions (backward compat, operate on codex) ──
+    // These keep the same names as the old API so existing callers don't break.
+    async startProxy() {
+      return this.startProxyForSource('codex')
+    },
+    async stopProxy() {
+      return this.stopProxyForSource('codex')
+    },
+    async restartProxy() {
+      return this.restartProxyForSource('codex')
+    },
+    async runHealthCheck() {
+      return this.runHealthCheckForSource('codex')
+    },
+    // ── Source-aware actions (new API) ──
+    async refreshStatus(source: SourceID) {
+      const status = (await GetProxyStatusForSource(source)) as ProxyStatusPayload
+      this.statuses[source] = status
     },
     async refreshConfig() {
       this.config = (await GetAppConfig()) as AppConfig
@@ -124,21 +183,25 @@ export const useAppStore = defineStore('app', {
       this.config = await saveAppConfigBridge(config)
       return this.config
     },
-    async startProxy() {
-      this.status = (await StartProxy()) as ProxyStatusPayload
-      return this.status
+    async startProxyForSource(source: SourceID) {
+      const status = (await StartProxyForSource(source)) as ProxyStatusPayload
+      this.statuses[source] = status
+      return status
     },
-    async stopProxy() {
-      this.status = (await StopProxy()) as ProxyStatusPayload
-      return this.status
+    async stopProxyForSource(source: SourceID) {
+      const status = (await StopProxyForSource(source)) as ProxyStatusPayload
+      this.statuses[source] = status
+      return status
     },
-    async restartProxy() {
-      this.status = (await RestartProxy()) as ProxyStatusPayload
-      return this.status
+    async restartProxyForSource(source: SourceID) {
+      const status = (await RestartProxyForSource(source)) as ProxyStatusPayload
+      this.statuses[source] = status
+      return status
     },
-    async runHealthCheck() {
-      this.healthCheck = (await RunHealthCheck()) as HealthCheckResult
-      return this.healthCheck
+    async runHealthCheckForSource(source: SourceID) {
+      const result = (await RunHealthCheckForSource(source)) as HealthCheckResult
+      this.healthChecks[source] = result
+      return result
     },
     async exportConfig() {
       return ExportConfig()
@@ -166,13 +229,23 @@ export const useAppStore = defineStore('app', {
         },
         proxyProfileIds: ids.includes(id) ? ids : [...ids, id],
       }
+      // Also add to codex instance
+      if (updated.instances?.codex) {
+        const codexIds = updated.instances.codex.proxyProfileIds || []
+        updated.instances = {
+          ...updated.instances,
+          codex: {
+            ...updated.instances.codex,
+            proxyProfileIds: codexIds.includes(id) ? codexIds : [...codexIds, id],
+          },
+        }
+      }
       this.config = await saveAppConfigBridge(updated)
       return this.config
     },
     async removeFromProxy(id: string) {
       const ids = (this.config.proxyProfileIds || []).filter(i => i !== id)
       let updated = { ...this.config, proxyProfileIds: ids }
-      // If profile has no API key (invalid), also remove from profiles
       const profile = this.config.profiles[id]
       if (profile && !profile.apiKey) {
         const { [id]: _, ...rest } = this.config.profiles
@@ -191,14 +264,12 @@ export const useAppStore = defineStore('app', {
       return this.config
     },
     async reorderAllProfiles(orderedIds: string[]) {
-      // Reconstruct profiles Record in the new order
       const reordered: Record<string, Profile> = {}
       for (const id of orderedIds) {
         if (this.config.profiles[id]) {
           reordered[id] = this.config.profiles[id]
         }
       }
-      // Preserve any profiles not in the ordered list
       for (const id of Object.keys(this.config.profiles)) {
         if (!reordered[id]) {
           reordered[id] = this.config.profiles[id]
@@ -210,7 +281,6 @@ export const useAppStore = defineStore('app', {
     },
     async deleteProfile(id: string) {
       if (id === this.config.currentProfileId) {
-        // Switch to another profile first
         const others = Object.keys(this.config.profiles).filter((k) => k !== id)
         if (others.length === 0) return this.config
         await this.setCurrentProfile(others[0])
@@ -228,12 +298,19 @@ export const useAppStore = defineStore('app', {
       this.usageStats = stats
       return stats
     },
-    applyStatus(status: ProxyStatusPayload) {
-      this.status = status
+    applyStatus(payload: ProxyStatusPayload) {
+      const source: SourceID = (payload.source as SourceID) || 'codex'
+      this.statuses[source] = payload
     },
     applySnapshot(snapshot: OverviewSnapshot) {
       this.config = snapshot.config
-      this.status = snapshot.status
+      // Try to populate both statuses from snapshot
+      if (snapshot.status.source) {
+        const src = snapshot.status.source as SourceID
+        this.statuses[src] = snapshot.status
+      } else {
+        this.statuses.codex = { ...snapshot.status, source: 'codex' }
+      }
       this.recentLogs = snapshot.recentLogs
       this.quickTips = snapshot.quickTips
       this.lastLoadedAt = new Date().toISOString()

@@ -76,7 +76,7 @@ func mergeCodexConfigTomlProfiles(existing []byte, baseURL string, defaultModel 
 // GenerateCodexConfigTomlProfiles returns the TOML content that would be
 // written by WriteCodexConfigTomlProfiles (for preview / clipboard).
 func (a *App) GenerateCodexConfigTomlProfiles() (string, error) {
-	status := a.proxy.Status()
+	status := a.proxies[SourceCodex].Status()
 	if strings.TrimSpace(status.ListenAddress) == "" {
 		return "", errors.New("代理服务未启动，无法生成 base_url")
 	}
@@ -99,7 +99,7 @@ func (a *App) GenerateCodexConfigTomlProfiles() (string, error) {
 // existing file so that unrelated sections like sandbox_workspace_write
 // and MCP configs are preserved.
 func (a *App) WriteCodexConfigTomlProfiles() (string, error) {
-	status := a.proxy.Status()
+	status := a.proxies[SourceCodex].Status()
 	if strings.TrimSpace(status.ListenAddress) == "" {
 		return "", errors.New("代理服务未启动，无法生成 base_url")
 	}

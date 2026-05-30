@@ -33,7 +33,7 @@ const updateDownloadURLTemplate = ""
 type App struct {
 	ctx        context.Context
 	store      *ConfigStore
-	proxy      *ProxyRuntime
+	proxies    map[SourceID]*ProxyRuntime
 	usageStore *UsageStore
 
 	mu     sync.RWMutex
@@ -61,7 +61,10 @@ func NewApp() *App {
 		app.usageStore = usageStore
 	}
 
-	app.proxy = NewProxyRuntime(app)
+	app.proxies = map[SourceID]*ProxyRuntime{
+		SourceCodex:  NewProxyRuntime(app, SourceCodex),
+		SourceClaude: NewProxyRuntime(app, SourceClaude),
+	}
 	return app
 }
 
@@ -116,11 +119,16 @@ func (a *App) ShouldHideOnClose() bool {
 }
 
 func (a *App) SetDebugMode(enabled bool) {
-	a.proxy.SetDebugMode(enabled)
+	for _, p := range a.proxies {
+		p.SetDebugMode(enabled)
+	}
 }
 
 func (a *App) GetDebugMode() bool {
-	return a.proxy.GetDebugMode()
+	if p, ok := a.proxies[SourceCodex]; ok {
+		return p.GetDebugMode()
+	}
+	return false
 }
 
 func (a *App) CheckForUpdates() (UpdateCheckResult, error) {
@@ -313,7 +321,9 @@ func (a *App) SaveAppConfig(cfg AppConfig) (AppConfig, error) {
 	a.config = cfg
 	a.mu.Unlock()
 
-	a.proxy.RefreshConfig()
+	for _, p := range a.proxies {
+		p.RefreshConfig()
+	}
 
 	a.appendLog("info", "app", "配置已保存", "")
 	return cfg, nil
@@ -340,7 +350,9 @@ func (a *App) SetCurrentProfile(id string) (AppConfig, error) {
 	a.config = cfg
 	a.mu.Unlock()
 
-	a.proxy.RefreshConfig()
+	for _, p := range a.proxies {
+		p.RefreshConfig()
+	}
 
 	a.appendLog("info", "app", "已切换到配置: "+cfg.Profiles[id].Name, "")
 	return cfg, nil
@@ -366,62 +378,115 @@ func (a *App) ImportConfig(payload string) (AppConfig, error) {
 	return a.SaveAppConfig(cfg)
 }
 
+// ── Backward-compatible proxy methods (default to SourceCodex) ──
+
 func (a *App) StartProxy() (ProxyStatusPayload, error) {
+	return a.StartProxyForSource(SourceCodex)
+}
+
+func (a *App) StopProxy() (ProxyStatusPayload, error) {
+	return a.StopProxyForSource(SourceCodex)
+}
+
+func (a *App) RestartProxy() (ProxyStatusPayload, error) {
+	return a.RestartProxyForSource(SourceCodex)
+}
+
+func (a *App) GetProxyStatus() ProxyStatusPayload {
+	return a.GetProxyStatusForSource(SourceCodex)
+}
+
+// ── Source-aware proxy methods ──
+
+func (a *App) StartProxyForSource(source SourceID) (ProxyStatusPayload, error) {
+	proxy, ok := a.proxies[source]
+	if !ok {
+		return ProxyStatusPayload{}, errors.New("未知来源: " + string(source))
+	}
+
 	cfg, err := a.GetAppConfig()
 	if err != nil {
 		return ProxyStatusPayload{}, err
 	}
-	profile, ok := cfg.Profiles[cfg.CurrentProfileID]
+
+	instCfg, ok := cfg.Instances[source]
+	if !ok {
+		return ProxyStatusPayload{}, errors.New("未知来源: " + string(source))
+	}
+
+	profile, ok := cfg.Profiles[instCfg.CurrentProfileID]
 	if !ok {
 		return ProxyStatusPayload{}, errors.New("当前配置不存在")
 	}
-	a.appendLog("info", "app", fmt.Sprintf("收到启动请求 [%s]: %s:%d -> %s (%s)", profile.Name, cfg.ListenHost, cfg.ListenPort, profile.BaseURL, profile.DefaultModel), "")
-	if err := validateConfig(cfg, true); err != nil {
-		a.appendLog("warn", "app", "启动前配置校验失败: "+err.Error(), "")
+
+	effective, ok := cfg.EffectiveConfig(source)
+	if !ok {
+		return ProxyStatusPayload{}, errors.New("无法构建有效配置")
+	}
+
+	a.appendLog("info", "app", fmt.Sprintf("收到启动请求 [%s] %s:%d -> %s (%s)", source, effective.ListenHost, effective.ListenPort, profile.BaseURL, profile.DefaultModel), "")
+	if err := validateConfig(effective, true); err != nil {
+		a.appendLog("warn", "app", "启动前配置校验失败 ["+string(source)+"]: "+err.Error(), "")
 		return ProxyStatusPayload{}, err
 	}
-	if err := a.proxy.Start(cfg); err != nil {
-		a.appendLog("error", "app", "启动代理失败: "+err.Error(), "")
+	if err := proxy.Start(effective); err != nil {
+		a.appendLog("error", "app", "启动代理失败 ["+string(source)+"]: "+err.Error(), "")
 		return ProxyStatusPayload{}, err
 	}
-	status := a.proxy.Status()
-	a.appendLog("info", "app", "启动命令已提交: "+status.ListenAddress, "")
+	status := proxy.Status()
+	a.appendLog("info", "app", "启动命令已提交 ["+string(source)+"]: "+status.ListenAddress, "")
 
 	return status, nil
 }
 
-func (a *App) StopProxy() (ProxyStatusPayload, error) {
-	a.appendLog("info", "app", "收到停止请求", "")
-	if err := a.proxy.Stop(); err != nil {
-		a.appendLog("error", "app", "停止代理失败: "+err.Error(), "")
+func (a *App) StopProxyForSource(source SourceID) (ProxyStatusPayload, error) {
+	proxy, ok := a.proxies[source]
+	if !ok {
+		return ProxyStatusPayload{}, errors.New("未知来源: " + string(source))
+	}
+	a.appendLog("info", "app", "收到停止请求 ["+string(source)+"]", "")
+	if err := proxy.Stop(); err != nil {
+		a.appendLog("error", "app", "停止代理失败 ["+string(source)+"]: "+err.Error(), "")
 		return ProxyStatusPayload{}, err
 	}
-	return a.proxy.Status(), nil
+	return proxy.Status(), nil
 }
 
-func (a *App) RestartProxy() (ProxyStatusPayload, error) {
-	a.appendLog("info", "app", "收到重启请求", "")
-	if err := a.proxy.Stop(); err != nil {
-		a.appendLog("error", "app", "重启时停止失败: "+err.Error(), "")
+func (a *App) RestartProxyForSource(source SourceID) (ProxyStatusPayload, error) {
+	a.appendLog("info", "app", "收到重启请求 ["+string(source)+"]", "")
+	if _, err := a.StopProxyForSource(source); err != nil {
+		a.appendLog("error", "app", "重启时停止失败 ["+string(source)+"]: "+err.Error(), "")
 		return ProxyStatusPayload{}, err
 	}
-	return a.StartProxy()
+	return a.StartProxyForSource(source)
 }
 
-func (a *App) GetProxyStatus() ProxyStatusPayload {
-	return a.proxy.Status()
+func (a *App) GetProxyStatusForSource(source SourceID) ProxyStatusPayload {
+	if proxy, ok := a.proxies[source]; ok {
+		return proxy.Status()
+	}
+	return ProxyStatusPayload{Source: source, Status: ProxyStopped}
 }
 
 func (a *App) GetOverviewSnapshot() (OverviewSnapshot, error) {
+	return a.GetOverviewSnapshotForSource(SourceCodex)
+}
+
+func (a *App) GetOverviewSnapshotForSource(source SourceID) (OverviewSnapshot, error) {
 	cfg, err := a.GetAppConfig()
 	if err != nil {
 		return OverviewSnapshot{}, err
 	}
 
+	instCfg, ok := cfg.Instances[source]
+	if !ok {
+		return OverviewSnapshot{}, errors.New("未知来源: " + string(source))
+	}
+
 	profileName := ""
 	defaultBaseURL := "https://api.deepseek.com/v1"
 	defaultModel := "deepseek-v4-flash"
-	if p, ok := cfg.Profiles[cfg.CurrentProfileID]; ok {
+	if p, ok := cfg.Profiles[instCfg.CurrentProfileID]; ok {
 		profileName = p.Name
 		prov := GetProvider(ProviderID(p.Provider))
 		if prov != nil {
@@ -437,9 +502,11 @@ func (a *App) GetOverviewSnapshot() (OverviewSnapshot, error) {
 		}
 	}
 
+	status := a.GetProxyStatusForSource(source)
+
 	return OverviewSnapshot{
 		Config:     cfg,
-		Status:     a.proxy.Status(),
+		Status:     status,
 		RecentLogs: a.GetLogHistory(6),
 		QuickTips: []string{
 			"先填写 API Base URL、API Key 和默认模型。",
@@ -462,9 +529,23 @@ func (a *App) GetOverviewSnapshot() (OverviewSnapshot, error) {
 }
 
 func (a *App) RunHealthCheck() (HealthCheckResult, error) {
+	return a.RunHealthCheckForSource(SourceCodex)
+}
+
+func (a *App) RunHealthCheckForSource(source SourceID) (HealthCheckResult, error) {
+	proxy, ok := a.proxies[source]
+	if !ok {
+		return HealthCheckResult{}, errors.New("未知来源: " + string(source))
+	}
+
 	cfg, err := a.GetAppConfig()
 	if err != nil {
 		return HealthCheckResult{}, err
+	}
+
+	effective, ok := cfg.EffectiveConfig(source)
+	if !ok {
+		return HealthCheckResult{}, errors.New("无法构建有效配置")
 	}
 
 	result := HealthCheckResult{
@@ -472,7 +553,7 @@ func (a *App) RunHealthCheck() (HealthCheckResult, error) {
 		Checks: make([]HealthCheckItem, 0, 3),
 	}
 
-	if err := validateConfig(cfg, true); err != nil {
+	if err := validateConfig(effective, true); err != nil {
 		result.OK = false
 		result.Checks = append(result.Checks, HealthCheckItem{
 			Name:    "配置完整性",
@@ -487,11 +568,11 @@ func (a *App) RunHealthCheck() (HealthCheckResult, error) {
 		})
 	}
 
-	if a.proxy.IsRunning() {
+	if proxy.IsRunning() {
 		result.Checks = append(result.Checks, HealthCheckItem{
 			Name:    "本地代理服务",
 			OK:      true,
-			Message: "代理服务正在运行: " + a.proxy.Status().ListenAddress,
+			Message: "代理服务正在运行: " + proxy.Status().ListenAddress,
 		})
 	} else {
 		result.OK = false
@@ -502,7 +583,7 @@ func (a *App) RunHealthCheck() (HealthCheckResult, error) {
 		})
 	}
 
-	upstreamErr := a.proxy.CheckUpstream(cfg)
+	upstreamErr := proxy.CheckUpstream(effective)
 	if upstreamErr != nil {
 		result.OK = false
 		result.Checks = append(result.Checks, HealthCheckItem{
@@ -518,7 +599,7 @@ func (a *App) RunHealthCheck() (HealthCheckResult, error) {
 		})
 	}
 
-	if status, msg, at := a.proxy.getLastUpstreamFailure(); status == 402 && !at.IsZero() && time.Since(at) < 24*time.Hour {
+	if status, msg, at := proxy.getLastUpstreamFailure(); status == 402 && !at.IsZero() && time.Since(at) < 24*time.Hour {
 		result.OK = false
 		hint := "检测到最近一次上游请求返回 402（余额不足/额度不足）。请充值或更换 API Key。"
 		if strings.TrimSpace(msg) != "" {
@@ -630,11 +711,13 @@ func (a *App) appendLog(level string, source string, message string, requestID s
 	}
 }
 
-func (a *App) emitStatus() {
+func (a *App) emitStatus(source SourceID) {
 	if a.ctx != nil {
 		ctx := a.ctx
-		payload := a.proxy.Status()
-		go runtime.EventsEmit(ctx, "proxy:status", payload)
+		if proxy, ok := a.proxies[source]; ok {
+			payload := proxy.Status()
+			go runtime.EventsEmit(ctx, "proxy:status", payload)
+		}
 	}
 }
 

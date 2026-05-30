@@ -26,7 +26,38 @@ export namespace main {
 	        this.apiType = source["apiType"];
 	    }
 	}
+	export class InstanceConfig {
+	    listenHost: string;
+	    listenPort: number;
+	    requestTimeoutMs: number;
+	    maxRetries: number;
+	    mappings: Record<string, string>;
+	    headers: Record<string, string>;
+	    currentProfileId: string;
+	    proxyProfileIds?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InstanceConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.listenHost = source["listenHost"];
+	        this.listenPort = source["listenPort"];
+	        this.requestTimeoutMs = source["requestTimeoutMs"];
+	        this.maxRetries = source["maxRetries"];
+	        this.mappings = source["mappings"];
+	        this.headers = source["headers"];
+	        this.currentProfileId = source["currentProfileId"];
+	        this.proxyProfileIds = source["proxyProfileIds"];
+	    }
+	}
 	export class AppConfig {
+	    enableAutoStart: boolean;
+	    minimizeToTray: boolean;
+	    logRetentionDays: number;
+	    compactMode: boolean;
+	    pluginUnlockEnabled: boolean;
 	    listenHost: string;
 	    listenPort: number;
 	    deepseekBaseURL: string;
@@ -34,16 +65,12 @@ export namespace main {
 	    defaultModel: string;
 	    requestTimeoutMs: number;
 	    maxRetries: number;
-	    enableAutoStart: boolean;
-	    minimizeToTray: boolean;
-	    logRetentionDays: number;
-	    compactMode: boolean;
-	    pluginUnlockEnabled: boolean;
 	    mappings: Record<string, string>;
 	    headers: Record<string, string>;
 	    currentProfileId?: string;
-	    profiles?: Record<string, Profile>;
 	    proxyProfileIds?: string[];
+	    instances?: Record<string, InstanceConfig>;
+	    profiles?: Record<string, Profile>;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -51,6 +78,11 @@ export namespace main {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enableAutoStart = source["enableAutoStart"];
+	        this.minimizeToTray = source["minimizeToTray"];
+	        this.logRetentionDays = source["logRetentionDays"];
+	        this.compactMode = source["compactMode"];
+	        this.pluginUnlockEnabled = source["pluginUnlockEnabled"];
 	        this.listenHost = source["listenHost"];
 	        this.listenPort = source["listenPort"];
 	        this.deepseekBaseURL = source["deepseekBaseURL"];
@@ -58,16 +90,12 @@ export namespace main {
 	        this.defaultModel = source["defaultModel"];
 	        this.requestTimeoutMs = source["requestTimeoutMs"];
 	        this.maxRetries = source["maxRetries"];
-	        this.enableAutoStart = source["enableAutoStart"];
-	        this.minimizeToTray = source["minimizeToTray"];
-	        this.logRetentionDays = source["logRetentionDays"];
-	        this.compactMode = source["compactMode"];
-	        this.pluginUnlockEnabled = source["pluginUnlockEnabled"];
 	        this.mappings = source["mappings"];
 	        this.headers = source["headers"];
 	        this.currentProfileId = source["currentProfileId"];
-	        this.profiles = this.convertValues(source["profiles"], Profile, true);
 	        this.proxyProfileIds = source["proxyProfileIds"];
+	        this.instances = this.convertValues(source["instances"], InstanceConfig, true);
+	        this.profiles = this.convertValues(source["profiles"], Profile, true);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -162,6 +190,7 @@ export namespace main {
 		    return a;
 		}
 	}
+	
 	export class LogEntry {
 	    id: string;
 	    level: string;
@@ -229,6 +258,7 @@ export namespace main {
 	    }
 	}
 	export class ProxyStatusPayload {
+	    source: string;
 	    status: string;
 	    listenAddress: string;
 	    startedAt: string;
@@ -242,6 +272,7 @@ export namespace main {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.source = source["source"];
 	        this.status = source["status"];
 	        this.listenAddress = source["listenAddress"];
 	        this.startedAt = source["startedAt"];
