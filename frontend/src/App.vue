@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { lightTheme, dateDeDE, dateEnUS, dateEsAR, dateFrFR, dateJaJP, dateKoKR, dateZhCN, deDE, enUS, esAR, frFR, jaJP, koKR, zhCN } from 'naive-ui'
 import { RouterView } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -14,14 +14,22 @@ const store = useAppStore()
 const ui = useUiStore()
 const { t, locale } = useI18n()
 
-// ── Global event subscriptions (never unmounted) ──
+// ── Global event subscriptions ──
+let unsubLog: (() => void) | undefined
+let unsubStatus: (() => void) | undefined
+
 onMounted(() => {
-  void EventsOn('log:entry', (entry: LogEntry) => {
+  unsubLog = EventsOn('log:entry', (entry: LogEntry) => {
     store.pushLog(entry)
   })
-  void EventsOn('proxy:status', (payload: ProxyStatusPayload) => {
+  unsubStatus = EventsOn('proxy:status', (payload: ProxyStatusPayload) => {
     store.applyStatus(payload)
   })
+})
+
+onBeforeUnmount(() => {
+  unsubLog?.()
+  unsubStatus?.()
 })
 
 watch(() => ui.locale, (value) => { locale.value = value }, { immediate: true })

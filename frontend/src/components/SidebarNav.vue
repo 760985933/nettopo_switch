@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { createDiscreteApi, lightTheme } from 'naive-ui'
@@ -123,11 +123,17 @@ async function toggleDebugMode() {
   await SetDebugMode(debugMode.value)
 }
 
+let unsubTrayHelp: (() => void) | undefined
+
 onMounted(async () => {
   try { appVersion.value = await GetAppVersion() } catch {}
   try { debugMode.value = await GetDebugMode() } catch {}
   await checkUpdates(false, true)
-  EventsOn('tray:help', () => { ui.showHelp = true })
+  unsubTrayHelp = EventsOn('tray:help', () => { ui.showHelp = true })
+})
+
+onBeforeUnmount(() => {
+  unsubTrayHelp?.()
 })
 </script>
 

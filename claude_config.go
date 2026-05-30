@@ -238,7 +238,13 @@ func (a *App) EnableClaudeSettings(profileID string) (string, error) {
 	// 2. Write Claude-3p gateway config so the desktop app also works.
 	model1M := make(map[string]bool, len(profile.ClaudeModel1M))
 	for _, m := range profile.ClaudeModel1M {
-		model1M[m] = true
+		// Resolve Claude-side model name (mapping key) to provider-side
+		// model name so the Supports1M lookup matches gateway model names.
+		providerModel := m
+		if mapped, ok := profile.Mappings[m]; ok && mapped != "" {
+			providerModel = mapped
+		}
+		model1M[providerModel] = true
 	}
 	if gwPath, gwErr := a.enableClaude3pGateway(gwUUID, gatewayBaseURL, claudeHaiku, claudeSonnet, claudeOpus, profile.Name, model1M); gwErr != nil {
 		a.appendLog("warn", "app", fmt.Sprintf("Claude-3p gateway 配置写入失败: %v", gwErr), "")
