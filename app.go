@@ -205,13 +205,19 @@ func (a *App) FetchChangelog() (ChangelogResult, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return a.loadChangelogCache()
+	}
+
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 256*1024))
 	if err != nil {
 		return a.loadChangelogCache()
 	}
 
 	content := string(raw)
-	if err := os.WriteFile(changelogCachePath, []byte(content), 0644); err != nil {
+	if err := os.MkdirAll(filepath.Dir(changelogCachePath), 0o755); err != nil {
+		a.appendLog("warn", "app", "创建更新记录缓存目录失败: "+err.Error(), "")
+	} else if err := os.WriteFile(changelogCachePath, []byte(content), 0644); err != nil {
 		a.appendLog("warn", "app", "写入更新记录缓存失败: "+err.Error(), "")
 	}
 	return ChangelogResult{Content: content, FromCache: false}, nil
