@@ -289,6 +289,8 @@ contact: {
 models: {
   editModel: '모델 편집',
   deleteModel: '모델 삭제',
+	  billingMode: '과금 방식',
+	  invalidProvider: '유효하지 않은 제공자',
 },
 profile: {
   add: '설정 추가',

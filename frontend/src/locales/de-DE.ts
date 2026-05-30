@@ -283,6 +283,8 @@ contact: {
 models: {
   editModel: 'Modell bearbeiten',
   deleteModel: 'Modell löschen',
+	  billingMode: 'Abrechnungsmodus',
+	  invalidProvider: 'Ungültiger Anbieter',
 },
 profile: {
   add: 'Konfiguration hinzufügen',

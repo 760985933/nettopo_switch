@@ -289,6 +289,8 @@ contact: {
 models: {
   editModel: 'モデルを編集',
   deleteModel: 'モデルを削除',
+	  billingMode: '課金モード',
+	  invalidProvider: '無効なプロバイダー',
 },
 profile: {
   add: '設定を追加',

@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 import { useUiStore } from '../stores/ui'
-import { getProviderPreset } from '../utils/providers'
+import { getProviderPreset, BILLING_MODE_LABELS } from '../utils/providers'
 import ProfileList from './ProfileList.vue'
 import ModelEditorPanel from './ModelEditorPanel.vue'
 import ProxySettingsPanel from './ProxySettingsPanel.vue'
@@ -56,6 +56,7 @@ const newProfileName = ref('')
 const newProfileProvider = ref('deepseek')
 const newProfileApiKey = ref('')
 const linkProfileId = ref<string | null>(null)
+const billingMode = ref<'paygo' | 'tokenplan'>('paygo')
 
 const unlinkedProfiles = computed(() => {
   const proxyIds = new Set(proxyProfilesForSource.value.map(p => p.id))
@@ -82,12 +83,18 @@ const linkProfileOptions = computed(() =>
   unlinkedProfiles.value.map(p => ({ label: `${p.name} (${p.provider})`, value: p.id }))
 )
 
+const hasTokenPlan = computed(() => {
+  const p = getProviderPreset(newProfileProvider.value)
+  return !!(p?.tokenPlanOpenAIBaseURL || p?.tokenPlanAnthropicBaseURL)
+})
+
 function openAddDialog() {
   addMode.value = 'new'
   newProfileName.value = ''
   newProfileProvider.value = 'deepseek'
   newProfileApiKey.value = ''
   linkProfileId.value = null
+  billingMode.value = 'paygo'
   showAddDialog.value = true
 }
 
@@ -95,14 +102,28 @@ async function handleAddProxy() {
   if (addMode.value === 'new') {
     if (!newProfileName.value.trim()) return
     const preset = getProviderPreset(newProfileProvider.value)
+    if (!preset) {
+      message.warning(t('models.invalidProvider'))
+      return
+    }
     const isClaude = props.source === 'claude'
-    const baseURL = isClaude && preset?.anthropicBaseURL
-      ? preset.anthropicBaseURL
-      : preset?.defaultBaseURL ?? ''
-    const defaultModel = isClaude && preset?.anthropicModel
-      ? preset.anthropicModel
-      : preset?.defaultModel ?? ''
-    const apiType = isClaude ? 'messages' : preset?.apiType ?? 'chat_completions'
+    const isTokenPlan = billingMode.value === 'tokenplan'
+    let baseURL: string
+    let defaultModel: string
+    if (isTokenPlan) {
+      baseURL = isClaude && preset.tokenPlanAnthropicBaseURL
+        ? preset.tokenPlanAnthropicBaseURL
+        : preset.tokenPlanOpenAIBaseURL ?? preset.defaultBaseURL
+      defaultModel = preset.defaultModel
+    } else {
+      baseURL = isClaude && preset.anthropicBaseURL
+        ? preset.anthropicBaseURL
+        : preset.defaultBaseURL
+      defaultModel = isClaude && preset.anthropicModel
+        ? preset.anthropicModel
+        : preset.defaultModel
+    }
+    const apiType = isClaude ? 'messages' : preset.apiType
     const profile: Profile = {
       id: '',
       name: newProfileName.value.trim(),
@@ -113,7 +134,6 @@ async function handleAddProxy() {
       apiType,
       mappings: {},
     }
-    // Add to shared profiles and link to this instance
     const newId = 'profile_' + Date.now().toString(36)
     const newInst = store.instanceConfig(props.source)
     const newUpdated: any = {
@@ -133,10 +153,11 @@ async function handleAddProxy() {
     }
     await store.saveConfig(newUpdated as any)
     message.success(t('models.toast.added'))
+  } else {
     if (!linkProfileId.value) return
     const ic = store.instanceConfig(props.source)
     const ids = [...(ic.proxyProfileIds || []), linkProfileId.value]
-    const updated = {
+    const updated: any = {
       ...store.config,
       instances: {
         ...store.config.instances,
@@ -300,6 +321,12 @@ async function handleRemoveProxy(id: string) {
           </n-form-item>
           <n-form-item :label="t('models.provider')">
             <n-select v-model:value="newProfileProvider" :options="providerOptions" />
+          </n-form-item>
+          <n-form-item v-if="hasTokenPlan" :label="t('models.billingMode')">
+            <n-radio-group v-model:value="billingMode">
+              <n-radio value="paygo">{{ BILLING_MODE_LABELS.paygo }}</n-radio>
+              <n-radio value="tokenplan">{{ BILLING_MODE_LABELS.tokenplan }}</n-radio>
+            </n-radio-group>
           </n-form-item>
           <n-form-item label="API Key">
             <n-input

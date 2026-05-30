@@ -31,17 +31,19 @@ const (
 
 // ProviderInfo 描述一个 LLM 提供商的元信息
 type ProviderInfo struct {
-	ID               ProviderID        // 内部标识
-	Name             string            // 显示名称
-	DefaultBaseURL   string            // 默认 API 地址 (OpenAI 兼容)
-	DefaultModel     string            // 默认模型
-	AnthropicBaseURL string            // Anthropic 兼容 API 地址
-	AnthropicModel   string            // Anthropic 兼容默认模型
-	DocsURL          string            // API 文档地址
-	DefaultMappings  map[string]string // Codex 模型 → 提供商模型映射
-	HasBalanceAPI    bool              // 是否有公开余额查询接口
-	BalanceCheckFn   func(apiKey, baseURL string) (*UsageBalance, error) // 余额查询函数（nil 表示不支持）
-	APIType          APIType           // 该提供商原生支持的 API 格式
+	ID                      ProviderID        // 内部标识
+	Name                    string            // 显示名称
+	DefaultBaseURL          string            // 默认 API 地址 (OpenAI 兼容, 按量计费)
+	DefaultModel            string            // 默认模型
+	AnthropicBaseURL        string            // Anthropic 兼容 API 地址 (按量计费)
+	AnthropicModel          string            // Anthropic 兼容默认模型
+	TokenPlanOpenAIBaseURL  string            // Token Plan OpenAI 兼容地址
+	TokenPlanAnthropicBaseURL string          // Token Plan Anthropic 兼容地址
+	DocsURL                 string            // API 文档地址
+	DefaultMappings         map[string]string // Codex 模型 → 提供商模型映射
+	HasBalanceAPI           bool              // 是否有公开余额查询接口
+	BalanceCheckFn          func(apiKey, baseURL string) (*UsageBalance, error)
+	APIType                 APIType           // 该提供商原生支持的 API 格式
 }
 
 // GetProvider 根据 ID 获取提供商信息；未知 ID 返回 nil
@@ -152,17 +154,19 @@ var registeredProviders = map[string]*ProviderInfo{
 		DefaultMappings:  alibabaDefaultMappings(),
 	},
 	string(ProviderXiaomi): {
-		ID:               ProviderXiaomi,
-		Name:             "小米 MiMo",
-		DefaultBaseURL:   "https://api.xiaomimimo.com/v1",
-		DefaultModel:     "mimo-v2.5-pro",
-		AnthropicBaseURL: "https://api.xiaomimimo.com/anthropic",
-		AnthropicModel:   "mimo-v2.5-pro",
-		DocsURL:          "https://platform.xiaomimimo.com/#/docs/welcome",
-		HasBalanceAPI:    false,
-		BalanceCheckFn:   nil,
-		APIType:          APIChatCompletions,
-		DefaultMappings:  xiaomiDefaultMappings(),
+		ID:                        ProviderXiaomi,
+		Name:                      "小米 MiMo",
+		DefaultBaseURL:            "https://api.xiaomimimo.com/v1",
+		DefaultModel:              "mimo-v2.5-pro",
+		AnthropicBaseURL:          "https://api.xiaomimimo.com/anthropic",
+		AnthropicModel:            "mimo-v2.5-pro",
+		TokenPlanOpenAIBaseURL:    "https://token-plan-cn.xiaomimimo.com/v1",
+		TokenPlanAnthropicBaseURL: "https://token-plan-cn.xiaomimimo.com/anthropic",
+		DocsURL:                   "https://platform.xiaomimimo.com/#/docs/welcome",
+		HasBalanceAPI:             false,
+		BalanceCheckFn:            nil,
+		APIType:                   APIChatCompletions,
+		DefaultMappings:           xiaomiDefaultMappings(),
 	},
 	string(ProviderZhipu): {
 		ID:               ProviderZhipu,
@@ -191,30 +195,34 @@ var registeredProviders = map[string]*ProviderInfo{
 		DefaultMappings:  baiduDefaultMappings(),
 	},
 	string(ProviderVolcano): {
-		ID:               ProviderVolcano,
-		Name:             "火山引擎豆包",
-		DefaultBaseURL:   "https://ark.cn-beijing.volces.com/api/v3",
-		DefaultModel:     "doubao-seed-2-0-lite-260215",
-		AnthropicBaseURL: "https://ark.cn-beijing.volces.com/api/coding",
-		AnthropicModel:   "doubao-seed-2-0-lite-260215",
-		DocsURL:          "https://www.volcengine.com/docs/82379/1330310",
-		HasBalanceAPI:    false,
-		BalanceCheckFn:   nil,
-		APIType:          APIChatCompletions,
-		DefaultMappings:  volcanoDefaultMappings(),
+		ID:                        ProviderVolcano,
+		Name:                      "火山引擎豆包",
+		DefaultBaseURL:            "https://ark.cn-beijing.volces.com/api/v3",
+		DefaultModel:              "doubao-seed-2-0-lite-260215",
+		AnthropicBaseURL:          "https://ark.cn-beijing.volces.com/api/coding",
+		AnthropicModel:            "doubao-seed-2-0-lite-260215",
+		TokenPlanOpenAIBaseURL:    "https://ark.cn-beijing.volces.com/api/coding/v3",
+		TokenPlanAnthropicBaseURL: "https://ark.cn-beijing.volces.com/api/coding",
+		DocsURL:                   "https://www.volcengine.com/docs/82379/1330310",
+		HasBalanceAPI:             false,
+		BalanceCheckFn:            nil,
+		APIType:                   APIChatCompletions,
+		DefaultMappings:           volcanoDefaultMappings(),
 	},
 	string(ProviderTencent): {
-		ID:               ProviderTencent,
-		Name:             "腾讯混元",
-		DefaultBaseURL:   "https://api.hunyuan.cloud.tencent.com/v1",
-		DefaultModel:     "hunyuan-2.0-thinking-20251109",
-		AnthropicBaseURL: "https://api.lkeap.cloud.tencent.com/plan/anthropic",
-		AnthropicModel:   "hunyuan-2.0-thinking-20251109",
-		DocsURL:          "https://cloud.tencent.com/document/product/1729/104753",
-		HasBalanceAPI:    false,
-		BalanceCheckFn:   nil,
-		APIType:          APIChatCompletions,
-		DefaultMappings:  tencentDefaultMappings(),
+		ID:                        ProviderTencent,
+		Name:                      "腾讯混元",
+		DefaultBaseURL:            "https://api.hunyuan.cloud.tencent.com/v1",
+		DefaultModel:              "hunyuan-2.0-thinking-20251109",
+		AnthropicBaseURL:          "https://api.lkeap.cloud.tencent.com/plan/anthropic",
+		AnthropicModel:            "hunyuan-2.0-thinking-20251109",
+		TokenPlanOpenAIBaseURL:    "https://api.lkeap.cloud.tencent.com/plan/v3",
+		TokenPlanAnthropicBaseURL: "https://api.lkeap.cloud.tencent.com/plan/anthropic",
+		DocsURL:                   "https://cloud.tencent.com/document/product/1729/104753",
+		HasBalanceAPI:             false,
+		BalanceCheckFn:            nil,
+		APIType:                   APIChatCompletions,
+		DefaultMappings:           tencentDefaultMappings(),
 	},
 	string(ProviderSilicon): {
 		ID:               ProviderSilicon,

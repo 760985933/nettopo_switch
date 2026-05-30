@@ -5,10 +5,17 @@ export interface ProviderPreset {
   defaultModel: string
   anthropicBaseURL?: string
   anthropicModel?: string
+  tokenPlanOpenAIBaseURL?: string
+  tokenPlanAnthropicBaseURL?: string
   docsURL: string
   placeholderApiKey: string
   placeholderModel: string
   apiType: 'chat_completions' | 'responses' | 'messages' | 'google'
+}
+
+export const BILLING_MODE_LABELS: Record<string, string> = {
+  paygo: '按量计费',
+  tokenplan: 'Token Plan',
 }
 
 export const API_TYPE_LABELS: Record<string, string> = {
@@ -50,6 +57,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     defaultModel: 'mimo-v2.5-pro',
     anthropicBaseURL: 'https://api.xiaomimimo.com/anthropic',
     anthropicModel: 'mimo-v2.5-pro',
+    tokenPlanOpenAIBaseURL: 'https://token-plan-cn.xiaomimimo.com/v1',
+    tokenPlanAnthropicBaseURL: 'https://token-plan-cn.xiaomimimo.com/anthropic',
     docsURL: 'https://platform.xiaomimimo.com/#/docs/welcome',
     placeholderApiKey: 'sk-...',
     placeholderModel: 'mimo-v2.5-pro',
@@ -86,6 +95,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     defaultModel: 'doubao-seed-2-0-lite-260215',
     anthropicBaseURL: 'https://ark.cn-beijing.volces.com/api/coding',
     anthropicModel: 'doubao-seed-2-0-lite-260215',
+    tokenPlanOpenAIBaseURL: 'https://ark.cn-beijing.volces.com/api/coding/v3',
+    tokenPlanAnthropicBaseURL: 'https://ark.cn-beijing.volces.com/api/coding',
     docsURL: 'https://www.volcengine.com/docs/82379/1330310',
     placeholderApiKey: 'sk-...',
     placeholderModel: 'doubao-seed-2-0-lite-260215',
@@ -98,6 +109,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     defaultModel: 'hunyuan-2.0-thinking-20251109',
     anthropicBaseURL: 'https://api.lkeap.cloud.tencent.com/plan/anthropic',
     anthropicModel: 'hunyuan-2.0-thinking-20251109',
+    tokenPlanOpenAIBaseURL: 'https://api.lkeap.cloud.tencent.com/plan/v3',
+    tokenPlanAnthropicBaseURL: 'https://api.lkeap.cloud.tencent.com/plan/anthropic',
     docsURL: 'https://cloud.tencent.com/document/product/1729/104753',
     placeholderApiKey: 'sk-...',
     placeholderModel: 'hunyuan-2.0-thinking-20251109',

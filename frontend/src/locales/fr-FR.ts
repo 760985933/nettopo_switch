@@ -289,6 +289,8 @@ contact: {
 models: {
   editModel: 'Modifier le modèle',
   deleteModel: 'Supprimer le modèle',
+	  billingMode: 'Mode de facturation',
+	  invalidProvider: 'Fournisseur invalide',
 },
 profile: {
   add: 'Ajouter une config',

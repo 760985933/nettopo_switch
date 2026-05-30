@@ -6,7 +6,7 @@ import { useAppStore } from '../stores/app'
 import type { Profile } from '../types'
 import KeyValueEditor from './KeyValueEditor.vue'
 import { maskSecret } from '../utils/format'
-import { PROVIDER_PRESETS, getProviderPreset } from '../utils/providers'
+import { PROVIDER_PRESETS, getProviderPreset, BILLING_MODE_LABELS } from '../utils/providers'
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
 
 const store = useAppStore()
@@ -18,6 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const formProfile = ref<Profile>({} as Profile)
+const billingMode = ref<'paygo' | 'tokenplan'>('paygo')
 const { t } = useI18n()
 const message = useMessage()
 
@@ -29,6 +30,11 @@ const providerOptions = PROVIDER_PRESETS.map((p) => ({
   label: p.label,
   value: p.id,
 }))
+
+const hasTokenPlan = computed(() => {
+  const p = getProviderPreset(formProfile.value.provider)
+  return !!(p?.tokenPlanOpenAIBaseURL || p?.tokenPlanAnthropicBaseURL)
+})
 
 const apiTypeOptions = [
   { label: 'Chat Completions（OpenAI 兼容）', value: 'chat_completions' },
@@ -56,6 +62,10 @@ function syncForm() {
       mappings: { ...p.mappings },
       apiType: p.apiType || getProviderPreset(p.provider)?.apiType || 'chat_completions',
     }
+    const preset = getProviderPreset(p.provider)
+    billingMode.value = preset?.tokenPlanOpenAIBaseURL === p.baseURL || preset?.tokenPlanAnthropicBaseURL === p.baseURL
+      ? 'tokenplan'
+      : 'paygo'
   }
 }
 
@@ -68,10 +78,27 @@ const apiKeyHint = computed(() =>
 
 function onProviderChange(providerId: string) {
   const preset = getProviderPreset(providerId)
+  billingMode.value = 'paygo'
   if (preset && providerId !== 'custom') {
     formProfile.value.baseURL = preset.defaultBaseURL
     formProfile.value.defaultModel = preset.defaultModel
     formProfile.value.apiType = preset.apiType
+  }
+}
+
+function onBillingModeChange(mode: 'paygo' | 'tokenplan') {
+  billingMode.value = mode
+  const preset = getProviderPreset(formProfile.value.provider)
+  if (!preset) return
+  const isAnthropic = formProfile.value.apiType === 'messages'
+  if (mode === 'tokenplan') {
+    formProfile.value.baseURL = isAnthropic && preset.tokenPlanAnthropicBaseURL
+      ? preset.tokenPlanAnthropicBaseURL
+      : preset.tokenPlanOpenAIBaseURL ?? preset.defaultBaseURL
+  } else {
+    formProfile.value.baseURL = isAnthropic && preset.anthropicBaseURL
+      ? preset.anthropicBaseURL
+      : preset.defaultBaseURL
   }
 }
 
@@ -119,6 +146,12 @@ async function submitSave() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </n-button>
           </div>
+        </n-form-item>
+        <n-form-item v-if="hasTokenPlan" :label="t('models.billingMode')" class="span-2">
+          <n-radio-group v-model:value="billingMode" size="small" @update:value="onBillingModeChange">
+            <n-radio value="paygo">{{ BILLING_MODE_LABELS.paygo }}</n-radio>
+            <n-radio value="tokenplan">{{ BILLING_MODE_LABELS.tokenplan }}</n-radio>
+          </n-radio-group>
         </n-form-item>
         <n-form-item label="API 格式" class="span-2">
           <n-select
