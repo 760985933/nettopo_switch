@@ -118,18 +118,18 @@ func (a *App) ArchiveCodexSession(id string) (*CodexSession, error) {
 	}
 
 	if isArchived {
-		destDir, err := codexSessionsDir()
-		if err != nil {
-			return nil, err
+		destDir, dirErr := codexSessionsDir()
+		if dirErr != nil {
+			return nil, dirErr
 		}
 		today := time.Now().Format("2006/01/02")
 		destDir = filepath.Join(destDir, today)
-		if err := os.MkdirAll(destDir, 0o755); err != nil {
-			return nil, err
+		if mkErr := os.MkdirAll(destDir, 0o755); mkErr != nil {
+			return nil, mkErr
 		}
 		dest := filepath.Join(destDir, filepath.Base(path))
-		if err := os.Rename(path, dest); err != nil {
-			return nil, err
+		if rnErr := os.Rename(path, dest); rnErr != nil {
+			return nil, rnErr
 		}
 		session, _, err := parseSessionFile(dest)
 		if err != nil {
@@ -143,12 +143,12 @@ func (a *App) ArchiveCodexSession(id string) (*CodexSession, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
-		return nil, err
+	if mkErr := os.MkdirAll(destDir, 0o755); mkErr != nil {
+		return nil, mkErr
 	}
 	dest := filepath.Join(destDir, filepath.Base(path))
-	if err := os.Rename(path, dest); err != nil {
-		return nil, err
+	if rnErr := os.Rename(path, dest); rnErr != nil {
+		return nil, rnErr
 	}
 	session, _, err := parseSessionFile(dest)
 	if err != nil {

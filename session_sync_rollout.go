@@ -418,8 +418,8 @@ func tryRewriteCollectedFirstLine(change syncRolloutChange) (bool, error) {
 	}
 
 	// Rewrite
-	if err := rewriteFirstLinePrechecked(change); err != nil {
-		return false, err
+	if rewriteErr := rewriteFirstLinePrechecked(change); rewriteErr != nil {
+		return false, rewriteErr
 	}
 
 	// Verify file wasn't modified concurrently during our write
@@ -447,7 +447,7 @@ func applySessionChanges(changes []syncRolloutChange) (appliedCount int, applied
 			appliedCount++
 			appliedPaths = append(appliedPaths, change.Path)
 			// Restore original mtime
-			restoreOriginalMtime(change.Path, change.OriginalMtimeMs)
+			restoreOriginalMtime(change.OriginalMtimeMs)
 		} else {
 			skippedPaths = append(skippedPaths, change.Path)
 		}
@@ -455,26 +455,7 @@ func applySessionChanges(changes []syncRolloutChange) (appliedCount int, applied
 	return
 }
 
-// restoreSessionChanges reverts previously-applied rollout file changes.
-func restoreSessionChanges(manifest []struct {
-	Path              string
-	OriginalFirstLine string
-	OriginalSeparator string
-	OriginalMtimeMs   int64
-}) {
-	for _, entry := range manifest {
-		change := syncRolloutChange{
-			Path:              entry.Path,
-			UpdatedFirstLine:  entry.OriginalFirstLine,
-			OriginalSeparator: entry.OriginalSeparator,
-			OriginalMtimeMs:   entry.OriginalMtimeMs,
-		}
-		_ = rewriteFirstLinePrechecked(change)
-		restoreOriginalMtime(entry.Path, entry.OriginalMtimeMs)
-	}
-}
-
-func restoreOriginalMtime(filePath string, mtimeMs int64) {
+func restoreOriginalMtime(mtimeMs int64) {
 	if mtimeMs <= 0 {
 		return
 	}

@@ -130,7 +130,7 @@ func (a *App) RunSync(targetProvider string) (*SyncResult, error) {
 	}
 
 	// 4. Create backup
-	backupDir, err := createSyncBackup(codexHome, targetProvider)
+	backupDir, err := createSyncBackup(codexHome)
 	if err != nil {
 		return nil, fmt.Errorf("backup failed: %w", err)
 	}
@@ -260,7 +260,7 @@ func (a *App) MigrateCodexProviders(from, to string) (*MigrationResult, error) {
 		result.Error = err.Error()
 		return result, err
 	}
-	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+	if err = os.MkdirAll(backupDir, 0o755); err != nil {
 		result.Error = err.Error()
 		return result, err
 	}
@@ -268,14 +268,14 @@ func (a *App) MigrateCodexProviders(from, to string) (*MigrationResult, error) {
 		fmt.Sprintf("sessions_backup_%s.tar", time.Now().Format("20060102_150405")))
 
 	var sessionDirs []string
-	if dir, err := codexSessionsDir(); err == nil {
-		sessionDirs = append(sessionDirs, dir)
+	if d, dErr := codexSessionsDir(); dErr == nil {
+		sessionDirs = append(sessionDirs, d)
 	}
-	if dir, err := codexArchivedSessionsDir(); err == nil {
-		sessionDirs = append(sessionDirs, dir)
+	if d, dErr := codexArchivedSessionsDir(); dErr == nil {
+		sessionDirs = append(sessionDirs, d)
 	}
 
-	if err := createTarBackup(backupPath, sessionDirs); err != nil {
+	if err = createTarBackup(backupPath, sessionDirs); err != nil {
 		result.Error = fmt.Sprintf("备份失败: %v", err)
 		return result, err
 	}
@@ -456,7 +456,7 @@ func countSyncBackups(root string) int {
 	return count
 }
 
-func createSyncBackup(codexHome string, targetProvider string) (string, error) {
+func createSyncBackup(codexHome string) (string, error) {
 	root := filepath.Join(codexHome, "backups_state", syncBackupSubDir)
 	ts := time.Now().UTC().Format("20060102T150405Z")
 	dir := filepath.Join(root, ts)

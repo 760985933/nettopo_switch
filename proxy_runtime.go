@@ -497,7 +497,7 @@ func (b *ProxyRuntime) handleResponses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if b.debugMode.Load() {
-		b.logChatBodyDebug(chatBody, model, requestID)
+		b.logChatBodyDebug(chatBody, requestID)
 	}
 	reasoningInjected := false
 	if patched, ok := injectReasoningIntoChatPayload(chatBody, b.getLastReasoning()); ok {
@@ -713,7 +713,7 @@ func (b *ProxyRuntime) handleResponsesWS(w http.ResponseWriter, r *http.Request)
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
-			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if pingErr := conn.WriteMessage(websocket.PingMessage, nil); pingErr != nil {
 				return
 			}
 		}
@@ -743,7 +743,7 @@ func (b *ProxyRuntime) handleResponsesWS(w http.ResponseWriter, r *http.Request)
 	}
 
 	if b.debugMode.Load() {
-		b.logChatBodyDebug(chatBody, model, requestID)
+		b.logChatBodyDebug(chatBody, requestID)
 	}
 
 	if !bytes.Contains(chatBody, []byte(`"stream":true`)) {
@@ -1218,7 +1218,7 @@ func (b *ProxyRuntime) logResponsesRequestDebug(body []byte, requestID string) {
 }
 
 // DEBUG: Chat Completions 翻译结果中图片相关部分
-func (b *ProxyRuntime) logChatBodyDebug(chatBody []byte, model, requestID string) {
+func (b *ProxyRuntime) logChatBodyDebug(chatBody []byte, requestID string) {
 	var payload map[string]any
 	if err := json.Unmarshal(chatBody, &payload); err != nil {
 		b.app.appendLog("info", string(b.source), "[DEBUG-CHAT] JSON parse err: "+err.Error(), requestID)
@@ -1316,8 +1316,8 @@ func (b *ProxyRuntime) handleAudioSpeech(w http.ResponseWriter, r *http.Request)
 	}
 
 	var payload map[string]any
-	if err := json.Unmarshal(body, &payload); err != nil {
-		b.app.appendLog("warn", string(b.source), "audio/speech JSON 解析失败: "+err.Error(), requestID)
+	if jsonErr := json.Unmarshal(body, &payload); jsonErr != nil {
+		b.app.appendLog("warn", string(b.source), "audio/speech JSON 解析失败: "+jsonErr.Error(), requestID)
 		b.writeProxyError(w, http.StatusBadRequest, "请求体不是有效的 JSON")
 		return
 	}

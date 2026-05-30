@@ -149,7 +149,7 @@ func (a *App) EnableClaudeSettings(profileID string) (string, error) {
 			inst.ProxyProfileIDs = append(inst.ProxyProfileIDs, profileID)
 		}
 		// Save the updated config so the proxy picks it up.
-		if _, err := a.SaveAppConfig(cfg); err != nil {
+		if _, saveErr := a.SaveAppConfig(cfg); saveErr != nil {
 			return "", fmt.Errorf("保存配置失败: %w", err)
 		}
 	}
@@ -262,7 +262,7 @@ func (a *App) enableClaude3pGateway(uuid, gatewayBaseURL, haikuModel, sonnetMode
 	if err != nil {
 		return "", err
 	}
-	if err := os.MkdirAll(libPath, 0o755); err != nil {
+	if err = os.MkdirAll(libPath, 0o755); err != nil {
 		return "", fmt.Errorf("创建 configLibrary 目录失败: %w", err)
 	}
 
@@ -316,7 +316,7 @@ func (a *App) updateClaude3pMeta(uuid, label string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(libPath, 0o755); err != nil {
+	if err = os.MkdirAll(libPath, 0o755); err != nil {
 		return fmt.Errorf("创建 configLibrary 目录失败: %w", err)
 	}
 	metaPath := filepath.Join(libPath, claude3pMetaFile)
@@ -327,13 +327,13 @@ func (a *App) updateClaude3pMeta(uuid, label string) error {
 	}
 
 	// Read existing _meta.json first — always preserve other entries.
-	if data, err := os.ReadFile(metaPath); err == nil {
+	if data, readErr := os.ReadFile(metaPath); readErr == nil {
 		var existing claude3pMeta
-		if err := json.Unmarshal(data, &existing); err == nil {
+		if unmarshalErr := json.Unmarshal(data, &existing); unmarshalErr == nil {
 			meta.Entries = existing.Entries
 		}
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("读取 _meta.json 失败: %w", err)
+	} else if !os.IsNotExist(readErr) {
+		return fmt.Errorf("读取 _meta.json 失败: %w", readErr)
 	}
 
 	// Merge the new entry (append-only).

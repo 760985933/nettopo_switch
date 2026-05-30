@@ -67,7 +67,7 @@ func (a *App) GetSandboxConfig() (SandboxWorkspaceConfig, error) {
 
 	doc := map[string]any{}
 	if len(bytes.TrimSpace(raw)) > 0 {
-		if err := toml.Unmarshal(raw, &doc); err != nil {
+		if err = toml.Unmarshal(raw, &doc); err != nil {
 			return SandboxWorkspaceConfig{}, err
 		}
 	}
@@ -96,7 +96,7 @@ func (a *App) SetSandboxConfig(cfg SandboxWorkspaceConfig) (SandboxWorkspaceConf
 
 	doc := map[string]any{}
 	if len(bytes.TrimSpace(raw)) > 0 {
-		if err := toml.Unmarshal(raw, &doc); err != nil {
+		if err = toml.Unmarshal(raw, &doc); err != nil {
 			return SandboxWorkspaceConfig{}, err
 		}
 	}

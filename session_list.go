@@ -330,22 +330,6 @@ func (a *App) ListCodexSessions() ([]CodexSession, error) {
 	return sessions, nil
 }
 
-// walkJSONLFiles 递归遍历目录下所有 .jsonl 文件
-func walkJSONLFiles(root string, fn func(path string)) error {
-	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if strings.HasSuffix(info.Name(), ".jsonl") {
-			fn(path)
-		}
-		return nil
-	})
-}
-
 // findSessionInDir 在目录中递归查找指定 ID 的会话
 func findSessionInDir(root, id string) (*SessionDetail, error) {
 	var result *SessionDetail

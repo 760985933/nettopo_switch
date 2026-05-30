@@ -104,7 +104,7 @@ func (a *App) RestoreCodexSessions(backupPath string) (*MigrationResult, error) 
 		result.Error = err.Error()
 		return result, err
 	}
-	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+	if err = os.MkdirAll(backupDir, 0o755); err != nil {
 		result.Error = err.Error()
 		return result, err
 	}
@@ -112,13 +112,13 @@ func (a *App) RestoreCodexSessions(backupPath string) (*MigrationResult, error) 
 		fmt.Sprintf("pre_restore_%s.tar", time.Now().Format("20060102_150405")))
 
 	var sessionDirs []string
-	if dir, err := codexSessionsDir(); err == nil {
-		sessionDirs = append(sessionDirs, dir)
+	if d, dErr := codexSessionsDir(); dErr == nil {
+		sessionDirs = append(sessionDirs, d)
 	}
-	if dir, err := codexArchivedSessionsDir(); err == nil {
-		sessionDirs = append(sessionDirs, dir)
+	if d, dErr := codexArchivedSessionsDir(); dErr == nil {
+		sessionDirs = append(sessionDirs, d)
 	}
-	if err := createTarBackup(preRestoreBackup, sessionDirs); err != nil {
+	if err = createTarBackup(preRestoreBackup, sessionDirs); err != nil {
 		result.Error = fmt.Sprintf("恢复前备份失败: %v", err)
 		return result, err
 	}

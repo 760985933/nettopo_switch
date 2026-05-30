@@ -54,7 +54,7 @@ func normalizeComparablePath(value string) string {
 
 func readThreadCwdStats(codexHome string) ([]threadCwdInfo, error) {
 	dbPath := stateDBPath(codexHome)
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(dbPath); os.IsNotExist(statErr) {
 		return nil, nil
 	}
 
@@ -222,7 +222,7 @@ func syncWorkspaceRoots(codexHome string, cwdStats []threadCwdInfo) (updated boo
 	}
 
 	var state map[string]any
-	if err := json.Unmarshal(originalBytes, &state); err != nil {
+	if err = json.Unmarshal(originalBytes, &state); err != nil {
 		return false, 0, 0, err
 	}
 
@@ -369,7 +369,7 @@ func readProjectThreadVisibility(codexHome string) ([]ProjectThreadInfo, error) 
 	}
 
 	var state map[string]any
-	if err := json.Unmarshal(stateBytes, &state); err != nil {
+	if err = json.Unmarshal(stateBytes, &state); err != nil {
 		return nil, err
 	}
 
@@ -379,7 +379,7 @@ func readProjectThreadVisibility(codexHome string) ([]ProjectThreadInfo, error) 
 	}
 
 	dbPath := stateDBPath(codexHome)
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(dbPath); os.IsNotExist(statErr) {
 		result := make([]ProjectThreadInfo, len(roots))
 		for i, root := range roots {
 			result[i] = ProjectThreadInfo{Root: root}
