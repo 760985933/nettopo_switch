@@ -227,7 +227,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:             false,
 		BalanceCheckFn:            nil,
 		APIType:                   APIChatCompletions,
-		VisionSupported:           false,
+		VisionSupported:           true,
 		DefaultMappings:           xiaomiDefaultMappings(),
 	},
 	string(ProviderZhipu): {
@@ -255,7 +255,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
-		VisionSupported:  false,
+		VisionSupported:  true,
 		DefaultMappings:  baiduDefaultMappings(),
 	},
 	string(ProviderVolcano): {
@@ -271,7 +271,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:             false,
 		BalanceCheckFn:            nil,
 		APIType:                   APIChatCompletions,
-		VisionSupported:           false,
+		VisionSupported:           true,
 		DefaultMappings:           volcanoDefaultMappings(),
 	},
 	string(ProviderTencent): {
@@ -287,7 +287,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:             false,
 		BalanceCheckFn:            nil,
 		APIType:                   APIChatCompletions,
-		VisionSupported:           false,
+		VisionSupported:           true,
 		DefaultMappings:           tencentDefaultMappings(),
 	},
 	string(ProviderSilicon): {
@@ -315,7 +315,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
-		VisionSupported:  false,
+		VisionSupported:  true,
 		DefaultMappings:  kimiDefaultMappings(),
 	},
 	string(ProviderMiniMax): {
@@ -329,7 +329,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
-		VisionSupported:  false,
+		VisionSupported:  true,
 		DefaultMappings:  minimaxDefaultMappings(),
 	},
 	string(ProviderGoogle): {
