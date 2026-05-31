@@ -390,10 +390,20 @@ func normalizeProfile(p *Profile, defaults AppConfig) {
 	if p.Mappings == nil {
 		p.Mappings = map[string]string{}
 	}
-	// Fill missing mappings from provider defaults (Codex model → provider model)
-	if prov != nil && prov.DefaultMappings != nil {
-		for key, value := range prov.DefaultMappings {
-			if _, ok := p.Mappings[key]; !ok {
+	// Fill default mappings ONLY when the profile is brand new (has no mappings yet).
+	// Once the user has configured mappings (even if they later delete some),
+	// we NEVER re-fill, so manual deletions persist across saves.
+	// For Messages API (Claude source) profiles, only fill Claude model mappings
+	// (e.g. claude-sonnet-4-6 → provider-model), not GPT model mappings.
+	if prov != nil && len(p.Mappings) == 0 {
+		if p.APIType == string(APIMessages) {
+			if cm := prov.ClaudeBaseMappings(); cm != nil {
+				for key, value := range cm {
+					p.Mappings[key] = value
+				}
+			}
+		} else if prov.DefaultMappings != nil {
+			for key, value := range prov.DefaultMappings {
 				p.Mappings[key] = value
 			}
 		}

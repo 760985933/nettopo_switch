@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type ProxyStatus string
 
@@ -123,13 +126,24 @@ func (cfg AppConfig) EffectiveConfig(source SourceID) (AppConfig, bool) {
 		}
 		// For Claude source only: add Claude model name → provider model
 		// mappings so the Messages API endpoint can resolve them correctly.
+		// Skip if the profile already has explicit Claude mappings, which
+		// means the user has curated the list and deletions should be respected.
 		if source == SourceClaude {
 			prov := GetProvider(ProviderID(profile.Provider))
 			if prov != nil {
-				if cm := prov.ClaudeBaseMappings(); cm != nil {
-					for key, value := range cm {
-						if _, ok := effective.Mappings[key]; !ok {
-							effective.Mappings[key] = value
+				hasExplicitClaude := false
+				for key := range profile.Mappings {
+					if strings.HasPrefix(key, "claude-") {
+						hasExplicitClaude = true
+						break
+					}
+				}
+				if !hasExplicitClaude {
+					if cm := prov.ClaudeBaseMappings(); cm != nil {
+						for key, value := range cm {
+							if _, ok := effective.Mappings[key]; !ok {
+								effective.Mappings[key] = value
+							}
 						}
 					}
 				}
