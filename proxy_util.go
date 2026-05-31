@@ -130,6 +130,12 @@ func copyRequestHeaders(dst http.Header, src http.Header, extraHeaders map[strin
 			continue
 		case strings.EqualFold(key, "Content-Length"):
 			continue
+		case strings.EqualFold(key, "Connection"):
+			continue
+		case strings.EqualFold(key, "Upgrade"):
+			continue
+		case strings.HasPrefix(strings.ToLower(key), "sec-websocket-"):
+			continue
 		}
 		for _, value := range values {
 			dst.Add(key, value)
