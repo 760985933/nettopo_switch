@@ -12,6 +12,7 @@ export interface ProviderPreset {
   placeholderModel: string
   apiType: 'chat_completions' | 'responses' | 'messages' | 'google'
   visionSupported: boolean  // whether the Chat Completions endpoint supports image_url
+  apiKeyURL: string         // URL to create/manage API keys
 }
 
 // ClaudeBaseMappings generates Claude-specific model mappings for a provider.
@@ -58,6 +59,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'deepseek-v4-flash',
     apiType: 'chat_completions',
     visionSupported: false,
+    apiKeyURL: 'https://platform.deepseek.com/api_keys',
   },
   {
     id: 'alibaba',
@@ -71,6 +73,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'qwen3.6-plus',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://bailian.console.aliyun.com/',
   },
   {
     id: 'xiaomi',
@@ -86,6 +89,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'mimo-v2.5-pro',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://platform.xiaomimimo.com/#/api-key',
   },
   {
     id: 'zhipu',
@@ -99,6 +103,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'glm-4.7-flash',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://open.bigmodel.cn/usercenter/apikeys',
   },
   {
     id: 'baidu',
@@ -112,6 +117,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'ernie-5.1',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://console.bce.baidu.com/qianfan/ais/console/application',
   },
   {
     id: 'volcano',
@@ -127,6 +133,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'doubao-seed-2-0-lite-260215',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey',
   },
   {
     id: 'tencent',
@@ -142,6 +149,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'hunyuan-2.0-thinking-20251109',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://console.cloud.tencent.com/lkeap/apikey',
   },
   {
     id: 'silicon',
@@ -155,6 +163,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'deepseek-ai/DeepSeek-V4-Flash',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://cloud.siliconflow.cn/account/ak',
   },
   {
     id: 'kimi',
@@ -168,6 +177,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'kimi-k2.6',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://platform.moonshot.cn/console/api-keys',
   },
   {
     id: 'minimax',
@@ -181,6 +191,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'MiniMax-M2.7',
     apiType: 'chat_completions',
     visionSupported: true,
+    apiKeyURL: 'https://platform.minimaxi.com/api-keys',
   },
   {
     id: 'google',
@@ -192,6 +203,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'gemini-2.5-flash',
     apiType: 'google',
     visionSupported: true,
+    apiKeyURL: 'https://aistudio.google.com/apikey',
   },
   {
     id: 'anthropic',
@@ -205,6 +217,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'claude-sonnet-4-6',
     apiType: 'messages',
     visionSupported: true,
+    apiKeyURL: 'https://console.anthropic.com/settings/keys',
   },
   {
     id: 'custom',
@@ -216,6 +229,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderModel: 'gpt-4o',
     apiType: 'chat_completions',
     visionSupported: false,
+    apiKeyURL: '',
   },
 ]
 

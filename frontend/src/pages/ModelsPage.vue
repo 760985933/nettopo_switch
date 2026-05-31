@@ -4,6 +4,7 @@ import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
 import { getProviderPreset } from '../utils/providers'
+import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
 import ModelEditorPanel from '../components/ModelEditorPanel.vue'
 import ProfileList from '../components/ProfileList.vue'
 
@@ -123,12 +124,23 @@ function handleEditorSave() {
           </n-radio-group>
         </n-form-item>
         <n-form-item label="API Key">
-          <n-input
-            v-model:value="newProfileApiKey"
-            type="password"
-            show-password-on="click"
-            :placeholder="getProviderPreset(newProfileProvider)?.placeholderApiKey ?? 'sk-...'"
-          />
+          <div style="display:flex;gap:4px;align-items:center;width:100%">
+            <n-input
+              v-model:value="newProfileApiKey"
+              type="password"
+              show-password-on="click"
+              :placeholder="getProviderPreset(newProfileProvider)?.placeholderApiKey ?? 'sk-...'"
+              style="flex:1;min-width:0"
+            />
+            <n-button
+              v-if="getProviderPreset(newProfileProvider)?.apiKeyURL"
+              text
+              size="small"
+              @click="BrowserOpenURL(getProviderPreset(newProfileProvider)!.apiKeyURL)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </n-button>
+          </div>
         </n-form-item>
       </n-form>
     </n-modal>

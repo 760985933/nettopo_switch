@@ -239,13 +239,23 @@ async function submitSave() {
           />
         </n-form-item>
         <n-form-item label="API Key" class="span-2" required>
-          <n-input
-            v-model:value="formProfile.apiKey"
-            type="password"
-            show-password-on="click"
-            :placeholder="getProviderPreset(formProfile.provider)?.placeholderApiKey ?? 'sk-...'"
-            size="small"
-          />
+          <div class="api-key-row">
+            <n-input
+              v-model:value="formProfile.apiKey"
+              type="password"
+              show-password-on="click"
+              :placeholder="getProviderPreset(formProfile.provider)?.placeholderApiKey ?? 'sk-...'"
+              size="small"
+            />
+            <n-button
+              v-if="getProviderPreset(formProfile.provider)?.apiKeyURL"
+              text
+              size="small"
+              @click="BrowserOpenURL(getProviderPreset(formProfile.provider)!.apiKeyURL)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </n-button>
+          </div>
           <div class="field-hint">{{ apiKeyHint }}</div>
         </n-form-item>
       </div>
@@ -315,6 +325,18 @@ async function submitSave() {
 }
 
 .provider-row .n-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.api-key-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+.api-key-row .n-input {
   flex: 1;
   min-width: 0;
 }
