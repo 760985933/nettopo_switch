@@ -883,7 +883,7 @@ func responsesInputToMessages(payload map[string]any, visionSupported bool) ([]a
 			role, _ := msg["role"].(string)
 			role = normalizeChatRole(role)
 
-			content := convertResponsesContentToChatContent(msg["content"])
+			content := convertResponsesContentToChatContent(msg["content"], visionSupported)
 			if contentStr, ok := content.(string); ok {
 				if strings.TrimSpace(contentStr) == "" {
 					content = flattenResponsesContent(msg)
@@ -912,7 +912,7 @@ func responsesInputToMessages(payload map[string]any, visionSupported bool) ([]a
 	case map[string]any:
 		role, _ := typed["role"].(string)
 		role = normalizeChatRole(role)
-		content := convertResponsesContentToChatContent(typed["content"])
+		content := convertResponsesContentToChatContent(typed["content"], visionSupported)
 		if s, ok := content.(string); ok && strings.TrimSpace(s) == "" {
 			content = flattenResponsesContent(typed)
 		}

@@ -45,8 +45,9 @@ func extractResponsesReasoningContent(msg map[string]any) string {
 
 // convertResponsesContentToChatContent converts Responses API content (string or array of parts)
 // to Chat Completions format. When non-text media (images, audio) is present, returns an array
-// of content parts; otherwise returns a plain string.
-func convertResponsesContentToChatContent(content any) any {
+// of content parts; otherwise returns a plain string. visionSupported controls whether image
+// content blocks are included (unsupported providers will have them silently dropped).
+func convertResponsesContentToChatContent(content any, visionSupported bool) any {
 	s, ok := content.(string)
 	if ok {
 		return s
@@ -65,14 +66,16 @@ func convertResponsesContentToChatContent(content any) any {
 		t, _ := p["type"].(string)
 		switch t {
 		case "input_image":
-			hasMedia = true
-			imageURL := extractImageURL(p["image_url"])
-			chatParts = append(chatParts, map[string]any{
-				"type": "image_url",
-				"image_url": map[string]any{
-					"url": imageURL,
-				},
-			})
+			if visionSupported {
+				hasMedia = true
+				imageURL := extractImageURL(p["image_url"])
+				chatParts = append(chatParts, map[string]any{
+					"type": "image_url",
+					"image_url": map[string]any{
+						"url": imageURL,
+					},
+				})
+			}
 		case "input_audio":
 			hasMedia = true
 			audioData, _ := p["input_audio"].(map[string]any)
