@@ -67,6 +67,10 @@ type AppConfig struct {
 	CurrentProfileID string            `json:"currentProfileId,omitempty"`
 	ProxyProfileIDs  []string          `json:"proxyProfileIds,omitempty"`
 
+	// Derived from selected profile's provider at EffectiveConfig build time.
+	// Controls whether upstream supports image_url content blocks.
+	VisionSupported bool `json:"visionSupported,omitempty"`
+
 	// ── Multi-instance configs (canonical storage) ──
 	Instances map[SourceID]*InstanceConfig `json:"instances,omitempty"`
 
@@ -102,6 +106,10 @@ func (cfg AppConfig) EffectiveConfig(source SourceID) (AppConfig, bool) {
 		effective.DeepseekBaseURL = profile.BaseURL
 		effective.APIKey = profile.APIKey
 		effective.DefaultModel = profile.DefaultModel
+		// Resolve vision support from the selected provider.
+		if prov := GetProvider(ProviderID(profile.Provider)); prov != nil {
+			effective.VisionSupported = prov.VisionSupported
+		}
 		// Merge profile's model mappings into effective config,
 		// so provider default mappings (e.g. gpt-5.4-mini → deepseek-v4-flash)
 		// are available even when ic.Mappings is empty.

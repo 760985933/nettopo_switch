@@ -199,6 +199,9 @@ func translateMessagesToChatCompletions(body []byte, cfg AppConfig) ([]byte, boo
 				}
 				switch b["type"] {
 				case "image":
+					if !cfg.VisionSupported {
+						continue
+					}
 					hasImage = true
 					source, _ := b["source"].(map[string]any)
 					if source != nil {
@@ -510,7 +513,7 @@ func translateResponsesToChatCompletions(body []byte, cfg AppConfig) ([]byte, bo
 		}
 	}
 
-	messages, err := responsesInputToMessages(payload)
+	messages, err := responsesInputToMessages(payload, cfg.VisionSupported)
 	if err != nil {
 		return nil, false, "", err
 	}
@@ -698,7 +701,7 @@ func normalizeThinkingForChatCompletions(v any) any {
 	return cleaned
 }
 
-func responsesInputToMessages(payload map[string]any) ([]any, error) {
+func responsesInputToMessages(payload map[string]any, visionSupported bool) ([]any, error) {
 	messages := make([]any, 0, 8)
 
 	if instructions, ok := payload["instructions"].(string); ok && strings.TrimSpace(instructions) != "" {
@@ -778,15 +781,17 @@ func responsesInputToMessages(payload map[string]any) ([]any, error) {
 				case "message":
 					// fallthrough to role/content parsing below
 				case "input_image":
-					imageURL := extractImageURL(msg["image_url"])
-					chatParts := []any{map[string]any{
-						"type": "image_url",
-						"image_url": map[string]any{"url": imageURL},
-					}}
-					messages = append(messages, map[string]any{
-						"role":    "user",
-						"content": chatParts,
-					})
+					if visionSupported {
+						imageURL := extractImageURL(msg["image_url"])
+						chatParts := []any{map[string]any{
+							"type": "image_url",
+							"image_url": map[string]any{"url": imageURL},
+						}}
+						messages = append(messages, map[string]any{
+							"role":    "user",
+							"content": chatParts,
+						})
+					}
 					continue
 					case "input_audio":
 						audioData, _ := msg["input_audio"].(map[string]any)

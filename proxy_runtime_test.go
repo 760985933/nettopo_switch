@@ -200,7 +200,7 @@ func TestResponsesInputToMessagesPassesReasoningContent(t *testing.T) {
 			},
 		},
 	}
-	msgs, err := responsesInputToMessages(payload)
+	msgs, err := responsesInputToMessages(payload, false)
 	if err != nil {
 		t.Fatalf("responsesInputToMessages returned error: %v", err)
 	}

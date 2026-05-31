@@ -50,6 +50,7 @@ type ProviderInfo struct {
 	HasBalanceAPI           bool              // 是否有公开余额查询接口
 	BalanceCheckFn          func(apiKey, baseURL string) (*UsageBalance, error)
 	APIType                 APIType           // 该提供商原生支持的 API 格式
+	VisionSupported         bool              // Chat Completions 接口是否支持 image_url 图片输入
 }
 
 // GetProvider 根据 ID 获取提供商信息；未知 ID 返回 nil
@@ -196,6 +197,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:        true,
 		BalanceCheckFn:       deepseekBalanceCheck,
 		APIType:              APIChatCompletions,
+		VisionSupported:      false,
 		DefaultMappings:      deepseekDefaultMappings(),
 	},
 	string(ProviderAlibaba): {
@@ -209,6 +211,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
+		VisionSupported:  true,
 		DefaultMappings:  alibabaDefaultMappings(),
 	},
 	string(ProviderXiaomi): {
@@ -224,6 +227,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:             false,
 		BalanceCheckFn:            nil,
 		APIType:                   APIChatCompletions,
+		VisionSupported:           false,
 		DefaultMappings:           xiaomiDefaultMappings(),
 	},
 	string(ProviderZhipu): {
@@ -237,6 +241,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
+		VisionSupported:  true,
 		DefaultMappings:  zhipuDefaultMappings(),
 	},
 	string(ProviderBaidu): {
@@ -250,6 +255,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
+		VisionSupported:  false,
 		DefaultMappings:  baiduDefaultMappings(),
 	},
 	string(ProviderVolcano): {
@@ -265,6 +271,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:             false,
 		BalanceCheckFn:            nil,
 		APIType:                   APIChatCompletions,
+		VisionSupported:           false,
 		DefaultMappings:           volcanoDefaultMappings(),
 	},
 	string(ProviderTencent): {
@@ -280,6 +287,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:             false,
 		BalanceCheckFn:            nil,
 		APIType:                   APIChatCompletions,
+		VisionSupported:           false,
 		DefaultMappings:           tencentDefaultMappings(),
 	},
 	string(ProviderSilicon): {
@@ -293,6 +301,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
+		VisionSupported:  true,
 		DefaultMappings:  siliconDefaultMappings(),
 	},
 	string(ProviderKimi): {
@@ -306,6 +315,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
+		VisionSupported:  false,
 		DefaultMappings:  kimiDefaultMappings(),
 	},
 	string(ProviderMiniMax): {
@@ -319,6 +329,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:    false,
 		BalanceCheckFn:   nil,
 		APIType:          APIChatCompletions,
+		VisionSupported:  false,
 		DefaultMappings:  minimaxDefaultMappings(),
 	},
 	string(ProviderGoogle): {
@@ -330,6 +341,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:   false,
 		BalanceCheckFn:  nil,
 		APIType:         APIGoogle,
+		VisionSupported: true,
 		DefaultMappings: googleDefaultMappings(),
 	},
 	string(ProviderAnthropic): {
@@ -346,6 +358,7 @@ var registeredProviders = map[string]*ProviderInfo{
 		HasBalanceAPI:     false,
 		BalanceCheckFn:    nil,
 		APIType:           APIMessages,
+		VisionSupported:   true,
 		DefaultMappings:   anthropicDefaultMappings(),
 	},
 }
