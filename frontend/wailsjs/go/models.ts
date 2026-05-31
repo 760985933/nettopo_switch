@@ -10,6 +10,7 @@ export namespace main {
 	    mappings: Record<string, string>;
 	    apiType?: string;
 	    claudeModel1m?: string[];
+	    visionSupported?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Profile(source);
@@ -26,6 +27,7 @@ export namespace main {
 	        this.mappings = source["mappings"];
 	        this.apiType = source["apiType"];
 	        this.claudeModel1m = source["claudeModel1m"];
+	        this.visionSupported = source["visionSupported"];
 	    }
 	}
 	export class InstanceConfig {

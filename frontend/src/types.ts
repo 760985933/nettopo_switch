@@ -12,6 +12,7 @@ export interface Profile {
   mappings: Record<string, string>
   apiType: string
   claudeModel1m?: string[] // model names with supports1M enabled
+  visionSupported?: boolean // per-profile override; undefined = use provider default
 }
 
 export interface InstanceConfig {

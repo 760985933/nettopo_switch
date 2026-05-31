@@ -31,6 +31,7 @@ type Profile struct {
 	Mappings     map[string]string `json:"mappings"`
 	APIType      string            `json:"apiType,omitempty"`
 	ClaudeModel1M []string         `json:"claudeModel1m,omitempty"` // model names that support 1M context
+	VisionSupported *bool          `json:"visionSupported,omitempty"` // per-profile override; nil = use provider default
 }
 
 // InstanceConfig holds the per-source proxy instance configuration.
@@ -106,8 +107,10 @@ func (cfg AppConfig) EffectiveConfig(source SourceID) (AppConfig, bool) {
 		effective.DeepseekBaseURL = profile.BaseURL
 		effective.APIKey = profile.APIKey
 		effective.DefaultModel = profile.DefaultModel
-		// Resolve vision support from the selected provider.
-		if prov := GetProvider(ProviderID(profile.Provider)); prov != nil {
+		// Resolve vision support: per-profile override takes precedence, otherwise fall back to the provider's hardcoded default.
+		if profile.VisionSupported != nil {
+			effective.VisionSupported = *profile.VisionSupported
+		} else if prov := GetProvider(ProviderID(profile.Provider)); prov != nil {
 			effective.VisionSupported = prov.VisionSupported
 		}
 		// Merge profile's model mappings into effective config,

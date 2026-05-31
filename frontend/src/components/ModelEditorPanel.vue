@@ -76,6 +76,28 @@ const apiKeyHint = computed(() =>
   }),
 )
 
+const providerVisionDefault = computed(() => {
+  const preset = getProviderPreset(formProfile.value.provider)
+  return preset?.visionSupported ?? false
+})
+
+const visionOverridden = computed(() => formProfile.value.visionSupported !== undefined)
+
+const visionStatusText = computed(() => {
+  const val = visionOverridden.value ? formProfile.value.visionSupported : providerVisionDefault.value
+  return val ? t('config.fields.visionSupportEnabled') : t('config.fields.visionSupportDisabled')
+})
+
+async function resetVision() {
+  formProfile.value.visionSupported = undefined
+  await submitSave()
+}
+
+async function onVisionChange(v: boolean) {
+  formProfile.value.visionSupported = v
+  await submitSave()
+}
+
 function onProviderChange(providerId: string) {
   const preset = getProviderPreset(providerId)
   billingMode.value = 'paygo'
@@ -187,6 +209,21 @@ async function submitSave() {
             @update:value="onApiTypeChange"
           />
         </n-form-item>
+        <n-form-item :label="t('config.fields.visionSupport')" class="span-2">
+          <div class="vision-row">
+            <n-switch
+              :value="visionOverridden ? formProfile.visionSupported : providerVisionDefault"
+              @update:value="onVisionChange"
+            />
+            <span class="vision-status">{{ visionStatusText }}</span>
+            <n-button v-if="visionOverridden" text size="tiny" @click="resetVision">
+              {{ t('config.fields.visionSupportReset') }}
+            </n-button>
+          </div>
+          <div class="field-hint">
+            {{ t('config.fields.visionSupportDefault', { status: providerVisionDefault ? t('config.fields.visionSupportEnabled') : t('config.fields.visionSupportDisabled') }) }}
+          </div>
+        </n-form-item>
         <n-form-item :label="t('config.fields.defaultModel')">
           <n-input
             v-model:value="formProfile.defaultModel"
@@ -257,6 +294,17 @@ async function submitSave() {
   margin-top: 4px;
   font-size: 11px;
   color: var(--muted);
+}
+
+.vision-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vision-status {
+  font-size: 13px;
+  color: var(--text);
 }
 
 .provider-row {

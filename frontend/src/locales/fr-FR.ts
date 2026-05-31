@@ -193,6 +193,11 @@ config: {
     maxRetries: 'Tentatives max',
     apiKeyHint: 'Affiché : {masked}',
     apiKeyMissing: 'Non défini',
+    visionSupport: "Vision Support",
+    visionSupportDefault: "Default: {status}",
+    visionSupportEnabled: "Enabled",
+    visionSupportDisabled: "Disabled",
+    visionSupportReset: "Reset",
   },
   advanced: {
     modelMapping: {

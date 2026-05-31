@@ -193,6 +193,11 @@ config: {
     maxRetries: '최대 재시도',
     apiKeyHint: '표시: {masked}',
     apiKeyMissing: '미설정',
+    visionSupport: "Vision Support",
+    visionSupportDefault: "Default: {status}",
+    visionSupportEnabled: "Enabled",
+    visionSupportDisabled: "Disabled",
+    visionSupportReset: "Reset",
   },
   advanced: {
     modelMapping: {

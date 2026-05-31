@@ -327,6 +327,11 @@ config: {
     maxRetries: '最大重试次数',
     apiKeyHint: '当前展示: {masked}',
     apiKeyMissing: '未配置',
+    visionSupport: "视觉支持",
+    visionSupportDefault: "默认: {status}",
+    visionSupportEnabled: "开启",
+    visionSupportDisabled: "关闭",
+    visionSupportReset: "恢复默认",
   },
   advanced: {
     modelMapping: {

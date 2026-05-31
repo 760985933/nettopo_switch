@@ -193,6 +193,11 @@ config: {
     maxRetries: '最大リトライ',
     apiKeyHint: '表示: {masked}',
     apiKeyMissing: '未設定',
+    visionSupport: "Vision Support",
+    visionSupportDefault: "Default: {status}",
+    visionSupportEnabled: "Enabled",
+    visionSupportDisabled: "Disabled",
+    visionSupportReset: "Reset",
   },
   advanced: {
     modelMapping: {

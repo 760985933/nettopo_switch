@@ -11,6 +11,7 @@ export interface ProviderPreset {
   placeholderApiKey: string
   placeholderModel: string
   apiType: 'chat_completions' | 'responses' | 'messages' | 'google'
+  visionSupported: boolean  // whether the Chat Completions endpoint supports image_url
 }
 
 // ClaudeBaseMappings generates Claude-specific model mappings for a provider.
@@ -56,6 +57,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'deepseek-v4-flash',
     apiType: 'chat_completions',
+    visionSupported: false,
   },
   {
     id: 'alibaba',
@@ -68,6 +70,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'qwen3.6-plus',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'xiaomi',
@@ -82,6 +85,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'mimo-v2.5-pro',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'zhipu',
@@ -94,6 +98,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'glm-4.7-flash',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'baidu',
@@ -106,6 +111,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'ernie-5.1',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'volcano',
@@ -120,6 +126,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'doubao-seed-2-0-lite-260215',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'tencent',
@@ -134,6 +141,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'hunyuan-2.0-thinking-20251109',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'silicon',
@@ -146,6 +154,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'deepseek-ai/DeepSeek-V4-Flash',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'kimi',
@@ -158,6 +167,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'kimi-k2.6',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'minimax',
@@ -170,6 +180,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'MiniMax-M2.7',
     apiType: 'chat_completions',
+    visionSupported: true,
   },
   {
     id: 'google',
@@ -180,6 +191,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'AIza...',
     placeholderModel: 'gemini-2.5-flash',
     apiType: 'google',
+    visionSupported: true,
   },
   {
     id: 'anthropic',
@@ -192,6 +204,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-ant-...',
     placeholderModel: 'claude-sonnet-4-6',
     apiType: 'messages',
+    visionSupported: true,
   },
   {
     id: 'custom',
@@ -202,6 +215,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     placeholderApiKey: 'sk-...',
     placeholderModel: 'gpt-4o',
     apiType: 'chat_completions',
+    visionSupported: false,
   },
 ]
 
