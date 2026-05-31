@@ -73,6 +73,7 @@ export namespace main {
 	    headers: Record<string, string>;
 	    currentProfileId?: string;
 	    proxyProfileIds?: string[];
+	    visionSupported?: boolean;
 	    instances?: Record<string, InstanceConfig>;
 	    profiles?: Record<string, Profile>;
 	
@@ -98,6 +99,7 @@ export namespace main {
 	        this.headers = source["headers"];
 	        this.currentProfileId = source["currentProfileId"];
 	        this.proxyProfileIds = source["proxyProfileIds"];
+	        this.visionSupported = source["visionSupported"];
 	        this.instances = this.convertValues(source["instances"], InstanceConfig, true);
 	        this.profiles = this.convertValues(source["profiles"], Profile, true);
 	    }
