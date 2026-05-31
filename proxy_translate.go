@@ -793,17 +793,17 @@ func responsesInputToMessages(payload map[string]any, visionSupported bool) ([]a
 						})
 					}
 					continue
-					case "input_audio":
-						audioData, _ := msg["input_audio"].(map[string]any)
-						chatParts := []any{map[string]any{
-							"type":        "input_audio",
-							"input_audio": audioData,
-						}}
-						messages = append(messages, map[string]any{
-							"role":    "user",
-							"content": chatParts,
-						})
-						continue
+				case "input_audio":
+					audioData, _ := msg["input_audio"].(map[string]any)
+					chatParts := []any{map[string]any{
+						"type":        "input_audio",
+						"input_audio": audioData,
+					}}
+					messages = append(messages, map[string]any{
+						"role":    "user",
+						"content": chatParts,
+					})
+					continue
 				case "input_text":
 					if text := strings.TrimSpace(flattenResponsesContent(msg)); text != "" {
 						messages = append(messages, map[string]any{"role": "user", "content": text})
